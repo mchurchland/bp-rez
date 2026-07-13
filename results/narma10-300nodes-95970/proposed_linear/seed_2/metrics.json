@@ -1,0 +1,14 @@
+{
+  "best_epoch": 200,
+  "best_validation_mse": 0.005549861118197441,
+  "device": "cuda",
+  "epochs_ran": 200,
+  "model": "proposed_linear",
+  "seed": 2,
+  "test_mse": 0.0030671008862555027,
+  "test_nrmse": 0.45233742923052117,
+  "trainable_parameters": 1661,
+  "training_seconds": 113.82819774514064,
+  "validation_mse": 0.005549861118197441,
+  "validation_nrmse": 0.5762931266357763
+}

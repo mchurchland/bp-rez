@@ -1,0 +1,65 @@
+Job ID: 95970
+Host: orcaga10
+Project: /home/milesc/bp-rez
+Conda environment: bp-reservoir
+Python: /home/milesc/.conda/envs/bp-reservoir/bin/python
+PyTorch: 2.13.0+cu130
+CUDA available: True
+GPU: NVIDIA A30
+[single_esn] seed=0 device=cuda
+  test MSE=0.00584 NRMSE=0.624173 best_epoch=200
+[single_esn] seed=1 device=cuda
+  test MSE=0.0078553 NRMSE=0.723902 best_epoch=200
+[single_esn] seed=2 device=cuda
+  test MSE=0.00814669 NRMSE=0.737206 best_epoch=200
+[single_esn] seed=3 device=cuda
+  test MSE=0.00630918 NRMSE=0.648761 best_epoch=200
+[single_esn] seed=4 device=cuda
+  test MSE=0.0060117 NRMSE=0.633282 best_epoch=200
+[deep_esn] seed=0 device=cuda
+  test MSE=0.0055939 NRMSE=0.61088 best_epoch=200
+[deep_esn] seed=1 device=cuda
+  test MSE=0.00906251 NRMSE=0.77754 best_epoch=200
+[deep_esn] seed=2 device=cuda
+  test MSE=0.00583262 NRMSE=0.623778 best_epoch=200
+[deep_esn] seed=3 device=cuda
+  test MSE=0.00627171 NRMSE=0.646832 best_epoch=200
+[deep_esn] seed=4 device=cuda
+  test MSE=0.00705395 NRMSE=0.685985 best_epoch=200
+[proposed_nonlinear] seed=0 device=cuda
+  test MSE=0.0029119 NRMSE=0.440744 best_epoch=200
+[proposed_nonlinear] seed=1 device=cuda
+  test MSE=0.00353468 NRMSE=0.485594 best_epoch=200
+[proposed_nonlinear] seed=2 device=cuda
+  test MSE=0.00309503 NRMSE=0.454393 best_epoch=200
+[proposed_nonlinear] seed=3 device=cuda
+  test MSE=0.00390385 NRMSE=0.510323 best_epoch=200
+[proposed_nonlinear] seed=4 device=cuda
+  test MSE=0.00416885 NRMSE=0.527359 best_epoch=200
+[proposed_linear] seed=0 device=cuda
+  test MSE=0.00296374 NRMSE=0.44465 best_epoch=200
+[proposed_linear] seed=1 device=cuda
+  test MSE=0.00346777 NRMSE=0.480976 best_epoch=200
+[proposed_linear] seed=2 device=cuda
+  test MSE=0.0030671 NRMSE=0.452337 best_epoch=200
+[proposed_linear] seed=3 device=cuda
+  test MSE=0.00368388 NRMSE=0.495737 best_epoch=200
+[proposed_linear] seed=4 device=cuda
+  test MSE=0.00408227 NRMSE=0.521854 best_epoch=200
+[large_esn] seed=0 device=cuda
+  test MSE=0.00447794 NRMSE=0.54656 best_epoch=200
+[large_esn] seed=1 device=cuda
+  test MSE=0.00451474 NRMSE=0.548801 best_epoch=200
+[large_esn] seed=2 device=cuda
+  test MSE=0.00473381 NRMSE=0.561958 best_epoch=200
+[large_esn] seed=3 device=cuda
+  test MSE=0.00393106 NRMSE=0.512099 best_epoch=200
+[large_esn] seed=4 device=cuda
+  test MSE=0.00484987 NRMSE=0.568805 best_epoch=200
+
+Aggregate test results
+single_esn           MSE=0.00683257±0.00108 NRMSE=0.673465±0.0531 params=151
+deep_esn             MSE=0.00676294±0.0014 NRMSE=0.669003±0.0671 params=151
+proposed_nonlinear   MSE=0.00352286±0.000529 NRMSE=0.483683±0.0365 params=1661
+proposed_linear      MSE=0.00345295±0.000458 NRMSE=0.479111±0.0317 params=1661
+large_esn            MSE=0.00450149±0.000354 NRMSE=0.547645±0.0219 params=301

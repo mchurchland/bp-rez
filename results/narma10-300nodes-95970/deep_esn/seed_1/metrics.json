@@ -1,0 +1,14 @@
+{
+  "best_epoch": 200,
+  "best_validation_mse": 0.010994920507073402,
+  "device": "cuda",
+  "epochs_ran": 200,
+  "model": "deep_esn",
+  "seed": 1,
+  "test_mse": 0.009062509052455425,
+  "test_nrmse": 0.7775399663124517,
+  "trainable_parameters": 151,
+  "training_seconds": 60.71399956708774,
+  "validation_mse": 0.010994920507073402,
+  "validation_nrmse": 0.8111448759708357
+}

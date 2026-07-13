@@ -1,0 +1,47 @@
+[
+  {
+    "model": "single_esn",
+    "seeds": 5,
+    "test_mse_mean": 0.006832574587315321,
+    "test_mse_std": 0.001084647601614943,
+    "test_nrmse_mean": 0.6734649929150354,
+    "test_nrmse_std": 0.05306013621591062,
+    "trainable_parameters": 151
+  },
+  {
+    "model": "deep_esn",
+    "seeds": 5,
+    "test_mse_mean": 0.006762936618179083,
+    "test_mse_std": 0.0014005507882071807,
+    "test_nrmse_mean": 0.6690030087117542,
+    "test_nrmse_std": 0.06705184408808627,
+    "trainable_parameters": 151
+  },
+  {
+    "model": "proposed_nonlinear",
+    "seeds": 5,
+    "test_mse_mean": 0.0035228604450821877,
+    "test_mse_std": 0.0005288889671056244,
+    "test_nrmse_mean": 0.48368251795610673,
+    "test_nrmse_std": 0.03647799575579128,
+    "trainable_parameters": 1661
+  },
+  {
+    "model": "proposed_linear",
+    "seeds": 5,
+    "test_mse_mean": 0.003452949970960617,
+    "test_mse_std": 0.000457654683012752,
+    "test_nrmse_mean": 0.47911089906941184,
+    "test_nrmse_std": 0.03166716011108548,
+    "trainable_parameters": 1661
+  },
+  {
+    "model": "large_esn",
+    "seeds": 5,
+    "test_mse_mean": 0.004501485172659159,
+    "test_mse_std": 0.00035406800271743996,
+    "test_nrmse_mean": 0.5476445222366267,
+    "test_nrmse_std": 0.02190135938696288,
+    "trainable_parameters": 301
+  }
+]
