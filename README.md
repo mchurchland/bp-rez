@@ -1,9 +1,15 @@
-# Trainable Intermediate Readout Reservoir on NARMA10
+# Backpropagation Through a Frozen Deep Reservoir
 
-This repository is a self-contained PyTorch research prototype comparing five
-reservoir models on deterministic NARMA10 sequences. The central model has two
-frozen 150-neuron reservoirs (300 recurrent nodes total) and a trainable
-10-dimensional intermediate representation.
+PyTorch research prototype for learning a low-dimensional intermediate readout
+between two fixed recurrent reservoirs. The model is evaluated on deterministic
+NARMA10 sequences against four reservoir-computing baselines.
+
+The proposed architecture contains two frozen 150-neuron reservoirs (300
+recurrent nodes total) and a trainable 10-dimensional intermediate
+representation. Only the intermediate readout and final output layer are
+trained; gradients still propagate through the frozen recurrent dynamics.
+
+![Two-reservoir architecture](figures/two_reservoir_architecture.png)
 
 ## Models
 
@@ -39,6 +45,36 @@ only the `tanh` applied to `h`.
 
 The distinction between `single_esn` and `large_esn` makes comparison 5 a true
 total-node-control for the two-layer networks.
+
+## Results
+
+The full comparison used five random-matrix/model seeds, a common deterministic
+NARMA10 dataset, 2,000 training points, 500 validation points, 500 test points,
+100 washout steps, and 200 Adam epochs. Values are test-set mean ± sample
+standard deviation across seeds.
+
+| Model | Test MSE ↓ | Test NRMSE ↓ | Trainable parameters |
+|---|---:|---:|---:|
+| Single ESN | 0.00683 ± 0.00108 | 0.673 ± 0.053 | 151 |
+| Fixed-interlayer DeepESN | 0.00676 ± 0.00140 | 0.669 ± 0.067 | 151 |
+| Proposed nonlinear | **0.00352 ± 0.00053** | **0.484 ± 0.037** | 1,661 |
+| Proposed linear | **0.00345 ± 0.00046** | **0.479 ± 0.032** | 1,661 |
+| Large 300-node ESN | 0.00450 ± 0.00035 | 0.548 ± 0.022 | 301 |
+
+Against the fixed-interlayer DeepESN, the nonlinear proposal reduced mean MSE
+by approximately 48% and mean NRMSE by 28%. Against the total-node-matched large
+ESN, it reduced MSE by approximately 22% and NRMSE by 12%.
+
+The linear intermediate ablation was marginally better than the nonlinear
+version, although their seed-level results were very close. The current evidence
+therefore supports the benefit of training the low-dimensional intermediate
+mapping, but does not demonstrate an additional benefit from applying `tanh` in
+that intermediate space.
+
+All configurations selected epoch 200, the maximum tested epoch. These results
+are an equal-budget comparison rather than evidence that every optimizer run had
+fully converged. The proposed models also use more trainable parameters than the
+baselines, which should be considered when interpreting the accuracy gain.
 
 ## Setup
 
