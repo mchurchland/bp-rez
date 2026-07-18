@@ -1,9 +1,15 @@
-# Trainable Intermediate Readout Reservoir on NARMA10
+# Backpropagation Through a Frozen Deep Reservoir
 
-This repository is a self-contained PyTorch research prototype comparing five
-reservoir models on deterministic NARMA10 sequences. The central model has two
-frozen 150-neuron reservoirs (300 recurrent nodes total) and a trainable
-10-dimensional intermediate representation.
+PyTorch research prototype for learning a low-dimensional intermediate readout
+between two fixed recurrent reservoirs. The model is evaluated on deterministic
+NARMA10 sequences against four reservoir-computing baselines.
+
+The proposed architecture contains two frozen 150-neuron reservoirs (300
+recurrent nodes total) and a trainable 10-dimensional intermediate
+representation. Only the intermediate readout and final output layer are
+trained; gradients still propagate through the frozen recurrent dynamics.
+
+![Two-reservoir architecture](figures/two_reservoir_architecture.png)
 
 ## Models
 
@@ -39,6 +45,77 @@ only the `tanh` applied to `h`.
 
 The distinction between `single_esn` and `large_esn` makes comparison 5 a true
 total-node-control for the two-layer networks.
+
+## Results
+
+The full comparison used five random-matrix/model seeds, a common deterministic
+NARMA10 dataset, 2,000 training points, 500 validation points, 500 test points,
+100 washout steps, and 200 Adam epochs. Values are test-set mean ± sample
+standard deviation across seeds.
+
+| Model | Test MSE ↓ | Test NRMSE ↓ | Trainable parameters |
+|---|---:|---:|---:|
+| Single ESN | 0.00683 ± 0.00108 | 0.673 ± 0.053 | 151 |
+| Fixed-interlayer DeepESN | 0.00676 ± 0.00140 | 0.669 ± 0.067 | 151 |
+| Proposed nonlinear | **0.00352 ± 0.00053** | **0.484 ± 0.037** | 1,661 |
+| Proposed linear | **0.00345 ± 0.00046** | **0.479 ± 0.032** | 1,661 |
+| Large 300-node ESN | 0.00450 ± 0.00035 | 0.548 ± 0.022 | 301 |
+
+Against the fixed-interlayer DeepESN, the nonlinear proposal reduced mean MSE
+by approximately 48% and mean NRMSE by 28%. Against the total-node-matched large
+ESN, it reduced MSE by approximately 22% and NRMSE by 12%.
+
+The linear intermediate ablation was marginally better than the nonlinear
+version, although their seed-level results were very close. The current evidence
+therefore supports the benefit of training the low-dimensional intermediate
+mapping, but does not demonstrate an additional benefit from applying `tanh` in
+that intermediate space.
+
+All configurations selected epoch 200, the maximum tested epoch. These results
+are an equal-budget comparison rather than evidence that every optimizer run had
+fully converged. The proposed models also use more trainable parameters than the
+baselines, which should be considered when interpreting the accuracy gain.
+
+## Secondary experiment: does the latent become heliocentric?
+
+`run_solar_experiment.py` adapts the solar-system experiment from
+[Iten et al., *Discovering physical concepts with neural networks*](https://arxiv.org/abs/1807.10300)
+to the frozen-reservoir architecture. From only the initial Earth-view angles of
+the Sun and Mars, the model predicts 50 weekly observations through a learned
+latent state constrained to evolve as `z[t+1] = z[t] + delta`. The default
+two-dimensional bottleneck matches the paper. A PyTorch `scinet` reference is
+included as a protocol check.
+
+The experiment tests two separate claims:
+
+1. prediction: test RMSE divided by `2*pi` (the paper reports below 0.4%); and
+2. representation: held-out linear fits on the paper's angle-unwrapped
+   heliocentric chart between the learned latent and the unobserved Earth/Mars
+   angles, plus agreement between the learned latent update and the update
+   implied by that fit.
+
+A short end-to-end development run is:
+
+```bash
+python run_solar_experiment.py --quick --device cpu \
+  --output-dir results/solar_quick
+```
+
+Run the five-phase, 15,000-update schedule with the paper's dataset sizes using:
+
+```bash
+python run_solar_experiment.py \
+  --models reservoir scinet --seeds 0 1 2 3 4 \
+  --latent-size 2 --nodes-1 150 --nodes-2 150 \
+  --output-dir results/solar_replication
+```
+
+Submit the equivalent GPU job with `sbatch run_solar_experiment.sbatch`. The
+original public TensorFlow code interpreted the 15,000 phase counts as complete
+dataset passes, which is millions of optimizer updates. Add
+`--full-dataset-epochs` for that literal reference-model reproduction; it is not
+the practical default. Architecture, sampling, metrics, artifacts, and known
+replication differences are detailed in [SOLAR_EXPERIMENT.md](SOLAR_EXPERIMENT.md).
 
 ## Setup
 
@@ -164,7 +241,11 @@ files report MSE, NRMSE, trainable parameter count, best epoch, and runtime.
 - `reservoir/data.py`: deterministic NARMA10 generation and splits.
 - `reservoir/models.py`: frozen reservoir matrices and all five variants.
 - `reservoir/experiment.py`: Adam/BPTT, clipping, early stopping, metrics, and artifacts.
+- `reservoir/solar_data.py`: circular Earth/Mars simulation and Earth-view observations.
+- `reservoir/solar_models.py`: reservoir adaptation and PyTorch SciNet reference.
+- `reservoir/solar_experiment.py`: phased training and heliocentric latent analysis.
 - `run_experiments.py`: command-line interface.
+- `run_solar_experiment.py`: secondary Copernicus experiment command-line interface.
 - `plot_architecture.py`: configurable neuron-level PNG/SVG/PDF diagram. Its
   default is a five-reservoir extension with 60 neurons per reservoir and four
   10-neuron latent stages. Run `python plot_architecture.py`, or reproduce the
