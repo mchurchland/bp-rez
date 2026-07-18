@@ -7,7 +7,10 @@
 #SBATCH --mem=16G
 #SBATCH --gres=gpu:1
 
-set -euo pipefail
+# Some cluster Conda distributions (notably Intel Python) have deactivate
+# hooks that read optional variables without defaults. Enable nounset only
+# after Conda has finished running those hooks.
+set -eo pipefail
 
 # Slurm normally sets this to the directory from which sbatch was called.
 PROJECT_DIR="${SLURM_SUBMIT_DIR:-$(pwd)}"
@@ -21,8 +24,10 @@ if ! command -v conda >/dev/null 2>&1; then
     exit 1
 fi
 CONDA_BASE="$(conda info --base)"
+set +u
 source "$CONDA_BASE/etc/profile.d/conda.sh"
 conda activate "$CONDA_ENV"
+set -u
 
 export MPLCONFIGDIR="${TMPDIR:-/tmp}/bp-reservoir-matplotlib-${SLURM_JOB_ID:-local}"
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"

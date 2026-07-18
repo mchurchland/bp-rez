@@ -1,0 +1,38 @@
+{
+  "data_seed": 2026,
+  "density": 0.1,
+  "device": "cpu",
+  "grad_clip": 1.0,
+  "input_scale": 0.5,
+  "interlayer_scale": 1.0,
+  "latent_size": 10,
+  "leak_rate": 1.0,
+  "learning_rate": 0.001,
+  "max_epochs": 2,
+  "min_delta": 1e-07,
+  "models": [
+    "single_esn",
+    "deep_esn",
+    "proposed_nonlinear",
+    "proposed_linear",
+    "large_esn"
+  ],
+  "nodes_1": 150,
+  "nodes_2": 150,
+  "output_dir": "results/smoke_5_seeds",
+  "patience": 2,
+  "resolved_device": "cpu",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "spectral_radius": 0.9,
+  "test_length": 30,
+  "train_length": 40,
+  "val_length": 30,
+  "washout": 10,
+  "weight_decay": 0.0
+}

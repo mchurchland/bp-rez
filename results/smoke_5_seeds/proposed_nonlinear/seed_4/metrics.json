@@ -1,0 +1,14 @@
+{
+  "best_epoch": 2,
+  "best_validation_mse": 0.1871454417705536,
+  "device": "cpu",
+  "epochs_ran": 2,
+  "model": "proposed_nonlinear",
+  "seed": 4,
+  "test_mse": 0.12029944360256195,
+  "test_nrmse": 5.063622311735233,
+  "trainable_parameters": 1661,
+  "training_seconds": 0.021450198008096777,
+  "validation_mse": 0.1871454417705536,
+  "validation_nrmse": 5.296060685823448
+}
