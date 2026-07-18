@@ -2,7 +2,7 @@
 #SBATCH --job-name=solar-latent
 #SBATCH --output=slurm-%x-%j.out
 #SBATCH --error=slurm-%x-%j.out
-#SBATCH --time=48:00:00
+#SBATCH --time=12:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24G
 #SBATCH --gres=gpu:1
