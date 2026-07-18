@@ -76,6 +76,47 @@ are an equal-budget comparison rather than evidence that every optimizer run had
 fully converged. The proposed models also use more trainable parameters than the
 baselines, which should be considered when interpreting the accuracy gain.
 
+## Secondary experiment: does the latent become heliocentric?
+
+`run_solar_experiment.py` adapts the solar-system experiment from
+[Iten et al., *Discovering physical concepts with neural networks*](https://arxiv.org/abs/1807.10300)
+to the frozen-reservoir architecture. From only the initial Earth-view angles of
+the Sun and Mars, the model predicts 50 weekly observations through a learned
+latent state constrained to evolve as `z[t+1] = z[t] + delta`. The default
+two-dimensional bottleneck matches the paper. A PyTorch `scinet` reference is
+included as a protocol check.
+
+The experiment tests two separate claims:
+
+1. prediction: test RMSE divided by `2*pi` (the paper reports below 0.4%); and
+2. representation: held-out linear fits on the paper's angle-unwrapped
+   heliocentric chart between the learned latent and the unobserved Earth/Mars
+   angles, plus agreement between the learned latent update and the update
+   implied by that fit.
+
+A short end-to-end development run is:
+
+```bash
+python run_solar_experiment.py --quick --device cpu \
+  --output-dir results/solar_quick
+```
+
+Run the five-phase, 15,000-update schedule with the paper's dataset sizes using:
+
+```bash
+python run_solar_experiment.py \
+  --models reservoir scinet --seeds 0 1 2 3 4 \
+  --latent-size 2 --nodes-1 150 --nodes-2 150 \
+  --output-dir results/solar_replication
+```
+
+Submit the equivalent GPU job with `sbatch run_solar_experiment.sbatch`. The
+original public TensorFlow code interpreted the 15,000 phase counts as complete
+dataset passes, which is millions of optimizer updates. Add
+`--full-dataset-epochs` for that literal reference-model reproduction; it is not
+the practical default. Architecture, sampling, metrics, artifacts, and known
+replication differences are detailed in [SOLAR_EXPERIMENT.md](SOLAR_EXPERIMENT.md).
+
 ## Setup
 
 Python 3.10 or newer is recommended. Create a Conda environment and install the
@@ -200,7 +241,11 @@ files report MSE, NRMSE, trainable parameter count, best epoch, and runtime.
 - `reservoir/data.py`: deterministic NARMA10 generation and splits.
 - `reservoir/models.py`: frozen reservoir matrices and all five variants.
 - `reservoir/experiment.py`: Adam/BPTT, clipping, early stopping, metrics, and artifacts.
+- `reservoir/solar_data.py`: circular Earth/Mars simulation and Earth-view observations.
+- `reservoir/solar_models.py`: reservoir adaptation and PyTorch SciNet reference.
+- `reservoir/solar_experiment.py`: phased training and heliocentric latent analysis.
 - `run_experiments.py`: command-line interface.
+- `run_solar_experiment.py`: secondary Copernicus experiment command-line interface.
 - `plot_architecture.py`: configurable neuron-level PNG/SVG/PDF diagram. Its
   default is a five-reservoir extension with 60 neurons per reservoir and four
   10-neuron latent stages. Run `python plot_architecture.py`, or reproduce the
