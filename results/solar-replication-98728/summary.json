@@ -1,0 +1,24 @@
+[
+  {
+    "heliocentric_to_latent_r2_mean": 0.9846809281421915,
+    "heliocentric_to_latent_r2_std": 0.0013521592796455761,
+    "latent_to_heliocentric_r2_mean": 0.9864186901670386,
+    "latent_to_heliocentric_r2_std": 0.0009767740782692924,
+    "model": "reservoir",
+    "seeds": 5,
+    "test_relative_rmse_2pi_mean": 0.05769809044836758,
+    "test_relative_rmse_2pi_std": 0.0011052889170025744,
+    "trainable_parameters": 606
+  },
+  {
+    "heliocentric_to_latent_r2_mean": 0.8564081306666036,
+    "heliocentric_to_latent_r2_std": 0.06290460778087507,
+    "latent_to_heliocentric_r2_mean": 0.9135138811710608,
+    "latent_to_heliocentric_r2_std": 0.03109147928776527,
+    "model": "scinet",
+    "seeds": 5,
+    "test_relative_rmse_2pi_mean": 0.1782235817372116,
+    "test_relative_rmse_2pi_std": 0.005755039851092721,
+    "trainable_parameters": 21408
+  }
+]
