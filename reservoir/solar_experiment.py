@@ -62,13 +62,14 @@ class SolarExperimentConfig:
     nodes_2: int = 150
     latent_size: int = 2
     encoder_steps: int = 3
+    second_reservoir_warmup_steps: int = 20
     second_reservoir_steps: int = 3
     scinet_hidden_size: int = 100
     spectral_radius: float = 0.9
     density: float = 0.1
     leak_rate: float = 1.0
     input_scale: float = 0.5
-    interlayer_scale: float = 1.0
+    interlayer_scale: float = 2.0
     phase_steps: tuple[int, ...] = (1_000, 1_000, 1_000, 1_000, 11_000)
     phase_batch_sizes: tuple[int, ...] = (256, 1_024, 1_024, 2_048, 2_048)
     phase_learning_rates: tuple[float, ...] = (1e-4, 1e-4, 1e-4, 1e-5, 1e-5)
@@ -105,6 +106,8 @@ def _validate_config(config: SolarExperimentConfig) -> None:
         raise ValueError("test_samples must be at least two for held-out latent fits")
     if config.latent_size < 1:
         raise ValueError("latent_size must be positive")
+    if config.second_reservoir_warmup_steps < 0:
+        raise ValueError("second_reservoir_warmup_steps must be nonnegative")
     phase_lengths = {
         len(config.phase_steps),
         len(config.phase_batch_sizes),
@@ -739,6 +742,9 @@ def run_solar_experiment(
                 density=config.density,
                 leak_rate=config.leak_rate,
                 encoder_steps=config.encoder_steps,
+                second_reservoir_warmup_steps=(
+                    config.second_reservoir_warmup_steps
+                ),
                 second_reservoir_steps=config.second_reservoir_steps,
                 scinet_hidden_size=config.scinet_hidden_size,
                 seed=seed,

@@ -43,7 +43,9 @@ srun python -u run_solar_experiment.py \
     --nodes-1 150 \
     --nodes-2 150 \
     --encoder-steps 3 \
+    --second-reservoir-warmup-steps 20 \
     --second-reservoir-steps 3 \
+    --interlayer-scale 2.0 \
     --train-samples 95000 \
     --validation-samples 5000 \
     --test-samples 5000 \

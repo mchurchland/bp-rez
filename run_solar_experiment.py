@@ -37,6 +37,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--latent-size", type=int, default=defaults.latent_size)
     parser.add_argument("--encoder-steps", type=int, default=defaults.encoder_steps)
     parser.add_argument(
+        "--second-reservoir-warmup-steps",
+        type=int,
+        default=defaults.second_reservoir_warmup_steps,
+        help="Initial recurrent updates performed while holding z[0] constant",
+    )
+    parser.add_argument(
         "--second-reservoir-steps",
         type=int,
         default=defaults.second_reservoir_steps,
@@ -144,6 +150,7 @@ def main() -> None:
         nodes_2=args.nodes_2,
         latent_size=args.latent_size,
         encoder_steps=args.encoder_steps,
+        second_reservoir_warmup_steps=args.second_reservoir_warmup_steps,
         second_reservoir_steps=args.second_reservoir_steps,
         scinet_hidden_size=args.scinet_hidden_size,
         spectral_radius=args.spectral_radius,

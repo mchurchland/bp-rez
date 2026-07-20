@@ -43,18 +43,23 @@ initialization. Only the bottleneck and final readout are optimized.
 x1[k+1] = (1-a)x1[k] + a tanh(A1 x1[k] + B1 observation)
 z[0]    = tanh(W x1[K] + b)
 z[t+1]  = z[t] + delta
-x2[0,0] = 0
-x2[t,0] = x2[t-1,K_second]                 for t > 0
-x2[t,k+1] = (1-a)x2[t,k] + a tanh(A2 x2[t,k] + R z[t])
-yhat[t] = Wout x2[t,K_second] + c
+x2 = 0
+repeat K_warmup times: x2 = (1-a)x2 + a tanh(A2 x2 + R z[0])
+yhat[0] = Wout x2 + c
+for t > 0:
+    repeat K_second times: x2 = (1-a)x2 + a tanh(A2 x2 + R z[t])
+    yhat[t] = Wout x2 + c
 ```
 
 `A1`, `A2`, `B1`, and `R` are fixed. `W`, `b`, `delta`, `Wout`, and `c` are
 trained end to end. The first reservoir is driven for `--encoder-steps` updates
 by the one initial observation. The second reservoir is initialized once and
-then retains its recurrent state across the complete forecast. It receives the
-current latent for `--second-reservoir-steps` recurrent updates per week before
-the readout produces that week's two angles.
+receives 20 preliminary updates while `z[0]` is held constant before the first
+readout. It then retains its recurrent state across the complete forecast and
+receives the current latent for `--second-reservoir-steps` recurrent updates per
+week. The preliminary count is configurable with
+`--second-reservoir-warmup-steps`. The default latent-to-second-reservoir input
+scale is `2.0`.
 
 This is a conceptual replication rather than an identical architecture. The
 paper uses fully trainable 100-100 MLP encoder/decoder networks and a beta-VAE;

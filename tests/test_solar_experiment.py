@@ -24,6 +24,7 @@ def reservoir(seed: int = 3) -> SolarReservoir:
         density=0.4,
         leak_rate=0.8,
         encoder_steps=2,
+        second_reservoir_warmup_steps=4,
         second_reservoir_steps=2,
         seed=seed,
     )
@@ -73,8 +74,12 @@ def test_second_reservoir_carries_state_across_forecast_weeks():
     prediction, latents = model.predict_with_latents(observation, horizon=5)
 
     state = torch.zeros((len(observation), model.nodes_2))
-    expected = []
-    for latent in latents.unbind(dim=1):
+    latent_sequence = latents.unbind(dim=1)
+    initial_drive = latent_sequence[0] @ model.R.T
+    for _ in range(model.second_reservoir_warmup_steps):
+        state = model._update(state, model.A2, initial_drive)
+    expected = [state @ model.W_out.T + model.c]
+    for latent in latent_sequence[1:]:
         drive = latent @ model.R.T
         for _ in range(model.second_reservoir_steps):
             state = model._update(state, model.A2, drive)
@@ -143,6 +148,7 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
         nodes_2=10,
         latent_size=2,
         encoder_steps=2,
+        second_reservoir_warmup_steps=4,
         second_reservoir_steps=2,
         scinet_hidden_size=12,
         density=0.4,

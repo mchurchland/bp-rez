@@ -71,6 +71,7 @@ class SolarReservoir(SolarModelBase):
         density: float,
         leak_rate: float,
         encoder_steps: int,
+        second_reservoir_warmup_steps: int,
         second_reservoir_steps: int,
         seed: int,
         nonlinear: bool = True,
@@ -82,6 +83,8 @@ class SolarReservoir(SolarModelBase):
             raise ValueError(
                 "encoder_steps and second_reservoir_steps must be positive"
             )
+        if second_reservoir_warmup_steps < 0:
+            raise ValueError("second_reservoir_warmup_steps must be nonnegative")
         if not 0.0 < leak_rate <= 1.0:
             raise ValueError("leak_rate must be in (0, 1]")
         self.nodes_1 = nodes_1
@@ -89,6 +92,7 @@ class SolarReservoir(SolarModelBase):
         self.latent_size = latent_size
         self.leak_rate = leak_rate
         self.encoder_steps = encoder_steps
+        self.second_reservoir_warmup_steps = second_reservoir_warmup_steps
         self.second_reservoir_steps = second_reservoir_steps
         self.nonlinear = nonlinear
         generator = torch.Generator(device="cpu").manual_seed(seed)
@@ -137,9 +141,13 @@ class SolarReservoir(SolarModelBase):
             raise ValueError("horizon must be positive")
         latent = initial_latent
         state = initial_latent.new_zeros((len(initial_latent), self.nodes_2))
-        predictions = []
-        latents = []
-        for _ in range(horizon):
+        initial_drive = latent @ self.R.T
+        for _ in range(self.second_reservoir_warmup_steps):
+            state = self._update(state, self.A2, initial_drive)
+        predictions = [state @ self.W_out.T + self.c]
+        latents = [latent]
+        latent = latent + self.latent_delta
+        for _ in range(1, horizon):
             latents.append(latent)
             drive = latent @ self.R.T
             for _ in range(self.second_reservoir_steps):
@@ -287,6 +295,7 @@ def build_solar_model(
     density: float,
     leak_rate: float,
     encoder_steps: int,
+    second_reservoir_warmup_steps: int,
     second_reservoir_steps: int,
     scinet_hidden_size: int,
     seed: int,
@@ -302,6 +311,7 @@ def build_solar_model(
             density=density,
             leak_rate=leak_rate,
             encoder_steps=encoder_steps,
+            second_reservoir_warmup_steps=second_reservoir_warmup_steps,
             second_reservoir_steps=second_reservoir_steps,
             seed=seed,
         )
