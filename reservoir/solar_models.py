@@ -50,13 +50,13 @@ class SolarModelBase(nn.Module, ABC):
 
 
 class SolarReservoir(SolarModelBase):
-    """Frozen two-reservoir model with a simply evolving learned bottleneck.
+    """Two-reservoir model with a simply evolving learned bottleneck.
 
     Only ``W``, ``b``, ``latent_delta``, ``W_out``, and ``c`` are trained. The
-    initial Earth-view observation is encoded by the first frozen reservoir,
-    after which the bottleneck is constrained to evolve by addition of one
-    learned constant per week. The second frozen reservoir and its trainable
-    linear readout decode the complete forecast.
+    initial Earth-view observation passes through the first reservoir, after
+    which the bottleneck is constrained to evolve by addition of one learned
+    constant per week. The second reservoir carries its recurrent state across
+    forecast weeks and produces features for the trainable linear readout.
     """
 
     def __init__(
@@ -71,15 +71,17 @@ class SolarReservoir(SolarModelBase):
         density: float,
         leak_rate: float,
         encoder_steps: int,
-        decoder_steps: int,
+        second_reservoir_steps: int,
         seed: int,
         nonlinear: bool = True,
     ) -> None:
         super().__init__()
         if nodes_1 < 1 or nodes_2 < 1 or latent_size < 1:
             raise ValueError("reservoir and latent sizes must be positive")
-        if encoder_steps < 1 or decoder_steps < 1:
-            raise ValueError("encoder_steps and decoder_steps must be positive")
+        if encoder_steps < 1 or second_reservoir_steps < 1:
+            raise ValueError(
+                "encoder_steps and second_reservoir_steps must be positive"
+            )
         if not 0.0 < leak_rate <= 1.0:
             raise ValueError("leak_rate must be in (0, 1]")
         self.nodes_1 = nodes_1
@@ -87,7 +89,7 @@ class SolarReservoir(SolarModelBase):
         self.latent_size = latent_size
         self.leak_rate = leak_rate
         self.encoder_steps = encoder_steps
-        self.decoder_steps = decoder_steps
+        self.second_reservoir_steps = second_reservoir_steps
         self.nonlinear = nonlinear
         generator = torch.Generator(device="cpu").manual_seed(seed)
         self.register_buffer(
@@ -128,22 +130,19 @@ class SolarReservoir(SolarModelBase):
         latent = state @ self.W.T + self.b
         return torch.tanh(latent) if self.nonlinear else latent
 
-    def _decode(
+    def _run_second_reservoir(
         self, initial_latent: torch.Tensor, horizon: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
         if horizon < 1:
             raise ValueError("horizon must be positive")
         latent = initial_latent
+        state = initial_latent.new_zeros((len(initial_latent), self.nodes_2))
         predictions = []
         latents = []
         for _ in range(horizon):
             latents.append(latent)
-            # The same memoryless frozen-reservoir decoder is applied to each
-            # latent state. Resetting here prevents hidden temporal information
-            # from bypassing the explicitly additive latent dynamics.
-            state = initial_latent.new_zeros((len(initial_latent), self.nodes_2))
             drive = latent @ self.R.T
-            for _ in range(self.decoder_steps):
+            for _ in range(self.second_reservoir_steps):
                 state = self._update(state, self.A2, drive)
             predictions.append(state @ self.W_out.T + self.c)
             latent = latent + self.latent_delta
@@ -153,7 +152,7 @@ class SolarReservoir(SolarModelBase):
         self, observation: torch.Tensor, horizon: int
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         initial_latent = self.encode(observation)
-        prediction, latents = self._decode(initial_latent, horizon)
+        prediction, latents = self._run_second_reservoir(initial_latent, horizon)
         # Deterministic analogue of SciNet's mean part of the beta-VAE KL.
         representation_penalty = 0.5 * initial_latent.square().sum(dim=-1).mean()
         return prediction, latents, representation_penalty
@@ -161,7 +160,7 @@ class SolarReservoir(SolarModelBase):
     def predict_with_latents(
         self, observation: torch.Tensor, horizon: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        return self._decode(self.encode(observation), horizon)
+        return self._run_second_reservoir(self.encode(observation), horizon)
 
 
 class SolarSciNet(SolarModelBase):
@@ -288,7 +287,7 @@ def build_solar_model(
     density: float,
     leak_rate: float,
     encoder_steps: int,
-    decoder_steps: int,
+    second_reservoir_steps: int,
     scinet_hidden_size: int,
     seed: int,
 ) -> SolarModelBase:
@@ -303,7 +302,7 @@ def build_solar_model(
             density=density,
             leak_rate=leak_rate,
             encoder_steps=encoder_steps,
-            decoder_steps=decoder_steps,
+            second_reservoir_steps=second_reservoir_steps,
             seed=seed,
         )
     if name == "scinet":

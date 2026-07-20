@@ -62,7 +62,7 @@ class SolarExperimentConfig:
     nodes_2: int = 150
     latent_size: int = 2
     encoder_steps: int = 3
-    decoder_steps: int = 3
+    second_reservoir_steps: int = 3
     scinet_hidden_size: int = 100
     spectral_radius: float = 0.9
     density: float = 0.1
@@ -739,7 +739,7 @@ def run_solar_experiment(
                 density=config.density,
                 leak_rate=config.leak_rate,
                 encoder_steps=config.encoder_steps,
-                decoder_steps=config.decoder_steps,
+                second_reservoir_steps=config.second_reservoir_steps,
                 scinet_hidden_size=config.scinet_hidden_size,
                 seed=seed,
             )

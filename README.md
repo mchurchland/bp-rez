@@ -1,13 +1,13 @@
-# Backpropagation Through a Frozen Deep Reservoir
+# Backpropagation Through a Deep Reservoir
 
 PyTorch research prototype for learning a low-dimensional intermediate readout
 between two fixed recurrent reservoirs. The model is evaluated on deterministic
 NARMA10 sequences against four reservoir-computing baselines.
 
-The proposed architecture contains two frozen 150-neuron reservoirs (300
+The proposed architecture contains two 150-neuron reservoir networks (300
 recurrent nodes total) and a trainable 10-dimensional intermediate
 representation. Only the intermediate readout and final output layer are
-trained; gradients still propagate through the frozen recurrent dynamics.
+trained; gradients still propagate through the recurrent dynamics.
 
 ![Two-reservoir architecture](figures/two_reservoir_architecture.png)
 
@@ -31,7 +31,7 @@ yhat[t+1] = Wout x2[t+1] + c
 Here `a` is the leak rate. `A1`, `A2`, `B1`, and `R` are fixed random tensors,
 registered as PyTorch buffers with `requires_grad=False`. Adam receives only
 `W`, `b`, `Wout`, and `c`. They remain inside the autograd graph, however, so
-full-sequence backpropagation passes through both frozen reservoirs and through
+full-sequence backpropagation passes through both reservoir networks and through
 the recurrent dynamics of the second reservoir. The linear ablation removes
 only the `tanh` applied to `h`.
 
@@ -80,7 +80,7 @@ baselines, which should be considered when interpreting the accuracy gain.
 
 `run_solar_experiment.py` adapts the solar-system experiment from
 [Iten et al., *Discovering physical concepts with neural networks*](https://arxiv.org/abs/1807.10300)
-to the frozen-reservoir architecture. From only the initial Earth-view angles of
+to the two-reservoir architecture. From only the initial Earth-view angles of
 the Sun and Mars, the model predicts 50 weekly observations through a learned
 latent state constrained to evolve as `z[t+1] = z[t] + delta`. The default
 two-dimensional bottleneck matches the paper. A PyTorch `scinet` reference is
@@ -241,7 +241,7 @@ files report MSE, NRMSE, trainable parameter count, best epoch, and runtime.
 ## Implementation map
 
 - `reservoir/data.py`: deterministic NARMA10 generation and splits.
-- `reservoir/models.py`: frozen reservoir matrices and all five variants.
+- `reservoir/models.py`: reservoir matrices and all five variants.
 - `reservoir/experiment.py`: Adam/BPTT, clipping, early stopping, metrics, and artifacts.
 - `reservoir/solar_data.py`: circular Earth/Mars simulation and Earth-view observations.
 - `reservoir/solar_models.py`: reservoir adaptation and PyTorch SciNet reference.
@@ -253,5 +253,5 @@ files report MSE, NRMSE, trainable parameter count, best epoch, and runtime.
   10-neuron latent stages. Run `python plot_architecture.py`, or reproduce the
   original two-reservoir layout with `python plot_architecture.py --reservoirs
   2 --output figures/two_reservoir_architecture.svg`.
-- `tests/test_prototype.py`: determinism, spectral scaling, frozen-buffer,
+- `tests/test_prototype.py`: determinism, spectral scaling, fixed-buffer,
   BPTT-gradient, parameter-count, and artifact tests.

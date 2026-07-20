@@ -36,7 +36,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--nodes-2", type=int, default=defaults.nodes_2)
     parser.add_argument("--latent-size", type=int, default=defaults.latent_size)
     parser.add_argument("--encoder-steps", type=int, default=defaults.encoder_steps)
-    parser.add_argument("--decoder-steps", type=int, default=defaults.decoder_steps)
+    parser.add_argument(
+        "--second-reservoir-steps",
+        type=int,
+        default=defaults.second_reservoir_steps,
+        help="Recurrent updates of the second reservoir per forecast week",
+    )
     parser.add_argument(
         "--scinet-hidden-size", type=int, default=defaults.scinet_hidden_size
     )
@@ -139,7 +144,7 @@ def main() -> None:
         nodes_2=args.nodes_2,
         latent_size=args.latent_size,
         encoder_steps=args.encoder_steps,
-        decoder_steps=args.decoder_steps,
+        second_reservoir_steps=args.second_reservoir_steps,
         scinet_hidden_size=args.scinet_hidden_size,
         spectral_radius=args.spectral_radius,
         density=args.density,

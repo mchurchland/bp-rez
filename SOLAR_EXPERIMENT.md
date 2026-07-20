@@ -1,7 +1,7 @@
 # Copernicus solar-system replication
 
 This secondary experiment asks whether the trainable intermediate
-representation in the frozen deep reservoir can discover the same kind of
+representation in the deep reservoir can discover the same kind of
 heliocentric coordinates reported by Iten et al. in
 [*Discovering physical concepts with neural networks*](https://arxiv.org/abs/1807.10300).
 It is kept separate from the NARMA10 comparison so that neither dataset,
@@ -36,30 +36,30 @@ angles is not sufficient evidence that the representation is heliocentric.
 ## Reservoir adaptation
 
 The `reservoir` model preserves the project's central design: both recurrent
-weight matrices and input/interlayer projections are frozen random buffers.
-Only the bottleneck and final readout are optimized.
+weight matrices and input/interlayer projections remain fixed after random
+initialization. Only the bottleneck and final readout are optimized.
 
 ```text
 x1[k+1] = (1-a)x1[k] + a tanh(A1 x1[k] + B1 observation)
 z[0]    = tanh(W x1[K] + b)
 z[t+1]  = z[t] + delta
-x2[t,0] = 0
+x2[0,0] = 0
+x2[t,0] = x2[t-1,K_second]                 for t > 0
 x2[t,k+1] = (1-a)x2[t,k] + a tanh(A2 x2[t,k] + R z[t])
-yhat[t] = Wout x2[t,K_decoder] + c
+yhat[t] = Wout x2[t,K_second] + c
 ```
 
 `A1`, `A2`, `B1`, and `R` are fixed. `W`, `b`, `delta`, `Wout`, and `c` are
 trained end to end. The first reservoir is driven for `--encoder-steps` updates
-by the one initial observation. The second reservoir is reset and driven for
-`--decoder-steps` updates for every forecast week, so it acts as the same
-memoryless nonlinear decoder at every time. All information about the initial
-state and all evolving state must pass through `z`; the decoder reservoir cannot
-see the original angles or carry hidden state between weeks.
+by the one initial observation. The second reservoir is initialized once and
+then retains its recurrent state across the complete forecast. It receives the
+current latent for `--second-reservoir-steps` recurrent updates per week before
+the readout produces that week's two angles.
 
 This is a conceptual replication rather than an identical architecture. The
 paper uses fully trainable 100-100 MLP encoder/decoder networks and a beta-VAE;
 the reservoir model deliberately substitutes this project's learned bottleneck
-between frozen random dynamics.
+between fixed random recurrent dynamics.
 
 ## SciNet reference
 

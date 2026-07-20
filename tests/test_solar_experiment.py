@@ -24,7 +24,7 @@ def reservoir(seed: int = 3) -> SolarReservoir:
         density=0.4,
         leak_rate=0.8,
         encoder_steps=2,
-        decoder_steps=2,
+        second_reservoir_steps=2,
         seed=seed,
     )
 
@@ -50,7 +50,7 @@ def test_solar_splits_are_independent():
     assert not torch.equal(splits["train"].observation[:8], splits["test"].observation)
 
 
-def test_reservoir_has_frozen_matrices_and_additive_latent_dynamics():
+def test_reservoir_has_registered_matrices_and_additive_latent_dynamics():
     model = reservoir()
     parameters = dict(model.named_parameters())
     buffers = dict(model.named_buffers())
@@ -67,7 +67,22 @@ def test_reservoir_has_frozen_matrices_and_additive_latent_dynamics():
     assert torch.allclose(latents[:, 1:] - latents[:, :-1], expected_delta)
 
 
-def test_solar_forecast_backpropagates_through_frozen_second_reservoir():
+def test_second_reservoir_carries_state_across_forecast_weeks():
+    model = reservoir()
+    observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
+    prediction, latents = model.predict_with_latents(observation, horizon=5)
+
+    state = torch.zeros((len(observation), model.nodes_2))
+    expected = []
+    for latent in latents.unbind(dim=1):
+        drive = latent @ model.R.T
+        for _ in range(model.second_reservoir_steps):
+            state = model._update(state, model.A2, drive)
+        expected.append(state @ model.W_out.T + model.c)
+    assert torch.allclose(prediction, torch.stack(expected, dim=1))
+
+
+def test_solar_forecast_backpropagates_through_second_reservoir():
     model = reservoir()
     observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
     prediction, _, penalty = model.training_forward(observation, horizon=5)
@@ -128,7 +143,7 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
         nodes_2=10,
         latent_size=2,
         encoder_steps=2,
-        decoder_steps=2,
+        second_reservoir_steps=2,
         scinet_hidden_size=12,
         density=0.4,
         phase_steps=(1,),
