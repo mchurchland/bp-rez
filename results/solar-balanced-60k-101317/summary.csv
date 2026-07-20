@@ -1,0 +1,3 @@
+model,seeds,trainable_parameters,test_relative_rmse_2pi_mean,test_relative_rmse_2pi_std,heliocentric_to_latent_r2_mean,heliocentric_to_latent_r2_std,latent_to_heliocentric_r2_mean,latent_to_heliocentric_r2_std
+reservoir,1,606,0.0450583169073077,0.0,0.9792013758276196,0.0,0.9841284852019762,0.0
+scinet,1,21408,0.18046760259860056,0.0,0.8077772018915037,0.0,0.8987597821377115,0.0
