@@ -84,7 +84,9 @@ to the frozen-reservoir architecture. From only the initial Earth-view angles of
 the Sun and Mars, the model predicts 50 weekly observations through a learned
 latent state constrained to evolve as `z[t+1] = z[t] + delta`. The default
 two-dimensional bottleneck matches the paper. A PyTorch `scinet` reference is
-included as a protocol check.
+included as a protocol check and follows the released TensorFlow graph's active
+behavior, including its overwritten log-sigma clip and unused regularized Euler
+matrix.
 
 The experiment tests two separate claims:
 

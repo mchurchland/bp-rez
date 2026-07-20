@@ -89,7 +89,29 @@ def test_scinet_reference_is_deterministic_at_evaluation():
     assert torch.allclose(
         first_latent[:, 1:] - first_latent[:, :-1],
         model.latent_delta.detach().expand_as(first_latent[:, 1:]),
+        atol=1e-6,
     )
+
+
+def test_scinet_matches_released_unclipped_sigma_and_unused_euler_weight():
+    model = SolarSciNet(latent_size=2, hidden_size=12, seed=4)
+    observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
+    with torch.no_grad():
+        for parameter in model.encoder.parameters():
+            parameter.zero_()
+        model.encoder[-1].bias.copy_(torch.tensor([0.0, 0.0, -7.0, 2.0]))
+
+    log_sigma = model.latent_log_sigma(observation)
+    assert log_sigma is not None
+    assert torch.equal(log_sigma, torch.tensor([[-7.0, 2.0], [-7.0, 2.0]]))
+
+    prediction_before, _ = model.predict_with_latents(observation, horizon=4)
+    regularizer_before = model.evolution_l2_loss().detach().clone()
+    with torch.no_grad():
+        model.euler_weight.add_(3.0)
+    prediction_after, _ = model.predict_with_latents(observation, horizon=4)
+    assert torch.equal(prediction_before, prediction_after)
+    assert model.evolution_l2_loss() > regularizer_before
 
 
 def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
@@ -115,6 +137,7 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
         phase_betas=(0.001,),
         phase_horizons=(6,),
         full_dataset_epochs=True,
+        training_log_interval=1,
         validation_interval=1,
         validation_subset=8,
         evaluation_batch_size=8,
@@ -140,6 +163,17 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
         metrics = json.loads((run_dir / "metrics.json").read_text())
         assert np.isfinite(metrics["test_relative_rmse_2pi"])
         assert np.isfinite(metrics["heliocentric_to_latent_r2"])
+        history = json.loads((run_dir / "history.json").read_text())
+        assert len(history["step"]) == 2
+        assert len(history["reconstruction_loss"]) == 2
+        assert len(history["latent_delta"]) == 1
+        if model_name == "scinet":
+            assert len(history["kl_loss"]) == 2
+            assert len(history["evolution_l2_loss"]) == 2
+            assert len(history["latent_sigma_mean"]) == 1
+            assert np.isfinite(metrics["final_latent_sigma_mean"])
+        else:
+            assert len(history["representation_loss"]) == 2
     assert (output / "config.json").is_file()
     assert (output / "metrics.csv").is_file()
     assert (output / "summary.csv").is_file()

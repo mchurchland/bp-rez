@@ -53,6 +53,8 @@ srun python -u run_solar_experiment.py \
     --phase-learning-rates 1e-4 1e-4 1e-4 1e-5 1e-5 \
     --phase-betas 0.1 0.1 0.1 0.01 0.001 \
     --phase-horizons 20 20 50 50 50 \
+    --euler-l2-coeff 1 \
     --full-dataset-epochs \
+    --training-log-interval 100 \
     --device auto \
     --output-dir "results/scinet-full-reproduction-${SLURM_JOB_ID:-local}"

@@ -74,7 +74,9 @@ class SolarExperimentConfig:
     phase_learning_rates: tuple[float, ...] = (1e-4, 1e-4, 1e-4, 1e-5, 1e-5)
     phase_betas: tuple[float, ...] = (0.1, 0.1, 0.1, 0.01, 0.001)
     phase_horizons: tuple[int, ...] = (20, 20, 50, 50, 50)
+    euler_l2_coeff: float = 1.0
     full_dataset_epochs: bool = False
+    training_log_interval: int = 100
     validation_interval: int = 250
     validation_subset: int = 1_024
     evaluation_batch_size: int = 1_024
@@ -118,16 +120,19 @@ def _validate_config(config: SolarExperimentConfig) -> None:
         raise ValueError("phase learning rates must be positive")
     if min(config.phase_betas) < 0.0:
         raise ValueError("phase betas must be nonnegative")
+    if config.euler_l2_coeff < 0.0:
+        raise ValueError("euler_l2_coeff must be nonnegative")
     if min(config.phase_horizons) < 1 or max(config.phase_horizons) > config.series_length:
         raise ValueError("phase horizons must be between one and series_length")
     if min(
         config.validation_interval,
         config.validation_subset,
         config.evaluation_batch_size,
+        config.training_log_interval,
     ) < 1:
         raise ValueError(
-            "validation_interval, validation_subset, and evaluation_batch_size "
-            "must be positive"
+            "validation_interval, validation_subset, evaluation_batch_size, and "
+            "training_log_interval must be positive"
         )
     if config.analysis_grid_size < 3:
         raise ValueError("analysis_grid_size must be at least three")
@@ -197,6 +202,49 @@ def _validation_mse(
     return metrics["mse"]
 
 
+def _training_diagnostics(
+    model: SolarModelBase,
+    dataset: SolarDataset,
+    subset: int,
+    batch_size: int,
+    device: torch.device,
+) -> dict[str, Any]:
+    """Measure latent training state on a fixed validation subset."""
+
+    diagnostics: dict[str, Any] = {
+        "latent_delta": model.latent_delta.detach().cpu().tolist(),
+    }
+    if not model.variational_latent:
+        return diagnostics
+
+    count = min(subset, len(dataset))
+    log_sigma_parts = []
+    model.eval()
+    with torch.no_grad():
+        for start in range(0, count, batch_size):
+            observation = dataset.observation[start : min(start + batch_size, count)].to(
+                device
+            )
+            log_sigma = model.latent_log_sigma(observation)
+            if log_sigma is None:
+                raise RuntimeError("variational model did not return latent log sigma")
+            log_sigma_parts.append(log_sigma.cpu())
+    all_log_sigma = torch.cat(log_sigma_parts)
+    all_sigma = torch.exp(all_log_sigma)
+    diagnostics.update(
+        {
+            "latent_log_sigma_min": float(all_log_sigma.min()),
+            "latent_log_sigma_mean": float(all_log_sigma.mean()),
+            "latent_log_sigma_max": float(all_log_sigma.max()),
+            "latent_sigma_min": float(all_sigma.min()),
+            "latent_sigma_mean": float(all_sigma.mean()),
+            "latent_sigma_max": float(all_sigma.max()),
+            "latent_sigma_mean_per_dimension": all_sigma.mean(dim=0).tolist(),
+        }
+    )
+    return diagnostics
+
+
 def train_solar_model(
     model: SolarModelBase,
     train: SolarDataset,
@@ -215,16 +263,22 @@ def train_solar_model(
         "step": [],
         "phase": [],
         "horizon": [],
-        "train_mse": [],
-        "representation_penalty": [],
+        "reconstruction_loss": [],
         "total_loss": [],
         "validation_step": [],
         "validation_mse": [],
+        "diagnostic_step": [],
+        "latent_delta": [],
     }
+    regularization_key = "kl_loss" if model.variational_latent else "representation_loss"
+    history[regularization_key] = []
+    if model.variational_latent:
+        history["evolution_l2_loss"] = []
     global_step = 0
     start_time = time.perf_counter()
     best_validation_mse = float("inf")
     best_validation_step = -1
+    final_diagnostics: dict[str, Any] = {}
 
     for phase_index, (steps, batch_size, learning_rate, beta, horizon) in enumerate(
         zip(
@@ -267,24 +321,43 @@ def train_solar_model(
                 observation, horizon
             )
             reconstruction = nn.functional.mse_loss(prediction, target)
-            loss = reconstruction + beta * representation_penalty
+            evolution_l2_loss = model.evolution_l2_loss()
+            loss = (
+                reconstruction
+                + beta * representation_penalty
+                + config.euler_l2_coeff * evolution_l2_loss
+            )
             loss.backward()
             if config.gradient_clip_value > 0.0:
                 nn.utils.clip_grad_value_(model.parameters(), config.gradient_clip_value)
             optimizer.step()
-            history["step"].append(global_step)
-            history["phase"].append(phase_index)
-            history["horizon"].append(horizon)
-            history["train_mse"].append(float(reconstruction.detach().cpu()))
-            history["representation_penalty"].append(
-                float(representation_penalty.detach().cpu())
-            )
-            history["total_loss"].append(float(loss.detach().cpu()))
 
             validate_now = (
                 (phase_step + 1) % validation_updates == 0
                 or phase_step == phase_updates - 1
             )
+            log_now = (
+                global_step == 1
+                or phase_step == 0
+                or global_step % config.training_log_interval == 0
+                or validate_now
+            )
+            if log_now:
+                history["step"].append(global_step)
+                history["phase"].append(phase_index)
+                history["horizon"].append(horizon)
+                history["reconstruction_loss"].append(
+                    float(reconstruction.detach().cpu())
+                )
+                history[regularization_key].append(
+                    float(representation_penalty.detach().cpu())
+                )
+                if model.variational_latent:
+                    history["evolution_l2_loss"].append(
+                        float(evolution_l2_loss.detach().cpu())
+                    )
+                history["total_loss"].append(float(loss.detach().cpu()))
+
             if validate_now:
                 validation_mse = _validation_mse(
                     model,
@@ -299,20 +372,47 @@ def train_solar_model(
                 if validation_mse < best_validation_mse:
                     best_validation_mse = validation_mse
                     best_validation_step = global_step
-                print(
-                    f"    phase={phase_index} step={global_step} horizon={horizon} "
-                    f"train_mse={history['train_mse'][-1]:.6g} "
-                    f"validation_mse={validation_mse:.6g}",
-                    flush=True,
+                final_diagnostics = _training_diagnostics(
+                    model,
+                    validation,
+                    config.validation_subset,
+                    config.evaluation_batch_size,
+                    device,
                 )
+                history["diagnostic_step"].append(global_step)
+                for key, value in final_diagnostics.items():
+                    history.setdefault(key, []).append(value)
+                message = (
+                    f"    phase={phase_index} step={global_step} horizon={horizon} "
+                    f"reconstruction={float(reconstruction.detach().cpu()):.6g} "
+                    f"{regularization_key}="
+                    f"{float(representation_penalty.detach().cpu()):.6g} "
+                    f"validation_mse={validation_mse:.6g}"
+                )
+                if model.variational_latent:
+                    delta = ", ".join(
+                        f"{value:.6g}" for value in final_diagnostics["latent_delta"]
+                    )
+                    message += (
+                        f" sigma[min/mean/max]="
+                        f"{final_diagnostics['latent_sigma_min']:.3g}/"
+                        f"{final_diagnostics['latent_sigma_mean']:.3g}/"
+                        f"{final_diagnostics['latent_sigma_max']:.3g}"
+                        f" latent_delta=[{delta}]"
+                    )
+                print(message, flush=True)
 
+    train_info: dict[str, Any] = {
+        "optimization_steps": global_step,
+        "best_validation_mse": best_validation_mse,
+        "best_validation_step": best_validation_step,
+        "training_seconds": time.perf_counter() - start_time,
+    }
+    train_info.update(
+        {f"final_{key}": value for key, value in final_diagnostics.items()}
+    )
     return (
-        {
-            "optimization_steps": global_step,
-            "best_validation_mse": best_validation_mse,
-            "best_validation_step": best_validation_step,
-            "training_seconds": time.perf_counter() - start_time,
-        },
+        train_info,
         history,
     )
 
@@ -421,18 +521,77 @@ def latent_diagnostics(
 
 
 def _save_training_plot(history: dict[str, list[Any]], path: Path) -> None:
-    figure, axis = plt.subplots(figsize=(8, 4.5))
-    axis.semilogy(history["step"], history["train_mse"], alpha=0.55, label="train")
-    axis.semilogy(
+    variational = "kl_loss" in history
+    row_count = 3 if variational else 1
+    figure, axes = plt.subplots(
+        row_count,
+        1,
+        figsize=(9, 4.5 if row_count == 1 else 10.5),
+        sharex=row_count > 1,
+        squeeze=False,
+    )
+    loss_axis = axes[0, 0]
+    loss_axis.semilogy(
+        history["step"],
+        history["reconstruction_loss"],
+        alpha=0.65,
+        label="train reconstruction",
+    )
+    loss_axis.semilogy(
         history["validation_step"],
         history["validation_mse"],
         marker="o",
         markersize=3,
         label="validation",
     )
-    axis.set(xlabel="Optimizer step", ylabel="MSE", title="Solar forecast training")
-    axis.grid(alpha=0.25)
-    axis.legend()
+    loss_axis.set(ylabel="MSE", title="Solar forecast training")
+    loss_axis.grid(alpha=0.25)
+    loss_axis.legend()
+
+    if variational:
+        regularization_axis = axes[1, 0]
+        regularization_axis.semilogy(
+            history["step"], history["kl_loss"], label="KL loss"
+        )
+        regularization_axis.semilogy(
+            history["step"],
+            history["evolution_l2_loss"],
+            label="Euler weight L2",
+        )
+        regularization_axis.set(ylabel="Unweighted loss")
+        regularization_axis.grid(alpha=0.25)
+        regularization_axis.legend()
+
+        diagnostic_axis = axes[2, 0]
+        for statistic in ("min", "mean", "max"):
+            diagnostic_axis.semilogy(
+                history["diagnostic_step"],
+                history[f"latent_sigma_{statistic}"],
+                marker=".",
+                label=f"sigma {statistic}",
+            )
+        diagnostic_axis.set(xlabel="Optimizer step", ylabel="Latent sigma")
+        diagnostic_axis.grid(alpha=0.25)
+        delta_axis = diagnostic_axis.twinx()
+        latent_delta = np.asarray(history["latent_delta"])
+        for dimension in range(latent_delta.shape[1]):
+            delta_axis.plot(
+                history["diagnostic_step"],
+                latent_delta[:, dimension],
+                linestyle="--",
+                label=f"delta[{dimension}]",
+            )
+        delta_axis.set_ylabel("Latent delta")
+        sigma_handles, sigma_labels = diagnostic_axis.get_legend_handles_labels()
+        delta_handles, delta_labels = delta_axis.get_legend_handles_labels()
+        diagnostic_axis.legend(
+            sigma_handles + delta_handles,
+            sigma_labels + delta_labels,
+            loc="best",
+        )
+    else:
+        loss_axis.set_xlabel("Optimizer step")
+
     figure.tight_layout()
     figure.savefig(path, dpi=150)
     plt.close(figure)
@@ -514,8 +673,9 @@ def _save_latent_surfaces(
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     if not rows:
         return
+    fieldnames = list(dict.fromkeys(key for row in rows for key in row))
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 

@@ -69,9 +69,21 @@ def parse_args() -> argparse.Namespace:
         "--phase-horizons", type=int, nargs="+", default=list(defaults.phase_horizons)
     )
     parser.add_argument(
+        "--euler-l2-coeff",
+        type=float,
+        default=defaults.euler_l2_coeff,
+        help="L2 coefficient for SciNet's released but unused Euler weight matrix",
+    )
+    parser.add_argument(
         "--full-dataset-epochs",
         action="store_true",
         help="Interpret phase steps as full shuffled dataset passes, as in the original code",
+    )
+    parser.add_argument(
+        "--training-log-interval",
+        type=int,
+        default=defaults.training_log_interval,
+        help="Save minibatch loss diagnostics every N optimizer updates",
     )
     parser.add_argument(
         "--validation-interval", type=int, default=defaults.validation_interval
@@ -139,7 +151,9 @@ def main() -> None:
         phase_learning_rates=tuple(args.phase_learning_rates),
         phase_betas=tuple(args.phase_betas),
         phase_horizons=tuple(args.phase_horizons),
+        euler_l2_coeff=args.euler_l2_coeff,
         full_dataset_epochs=args.full_dataset_epochs,
+        training_log_interval=args.training_log_interval,
         validation_interval=args.validation_interval,
         validation_subset=args.validation_subset,
         evaluation_batch_size=args.evaluation_batch_size,

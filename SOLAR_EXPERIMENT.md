@@ -71,12 +71,14 @@ Copernicus graph:
 - learned additive latent update; and
 - shared 100-100 ELU decoder at every forecast time.
 
-Two small implementation choices are intentional. The public source clips the
-latent log standard deviation and then immediately overwrites the clipped
-tensor; this implementation retains the intended `[-5, 0.5]` clip for numerical
-stability. It also omits an unused Euler weight matrix that is regularized in
-the public graph but never applied to the latent update. Neither affects the
-intended `z + delta` model.
+The reference follows the active public TensorFlow graph literally, including
+two accidental-looking behaviors. The source clips the latent log standard
+deviation and then immediately overwrites the clipped tensor, so this port also
+uses the unrestricted encoder output. The graph also creates and L2-regularizes
+an Euler weight matrix but never applies it: the update adds only its learned
+bias. The PyTorch model retains that unused matrix and its default coefficient
+of `1.0` so that its objective and trainable parameter count match the released
+graph, rather than a cleaned-up interpretation of it.
 
 ## Data sampling
 
@@ -118,6 +120,14 @@ the `scinet` reference on suitable compute.
 The beta term is the original KL divergence for `scinet`. For the deterministic
 reservoir latent, it is a mean-squared activation penalty; this is the closest
 deterministic analogue, not an exact beta-VAE objective.
+
+`history.json` records reconstruction and KL losses every
+`--training-log-interval` optimizer updates (default 100). At each validation
+point it also records the minimum, mean, and maximum latent standard deviation,
+the corresponding log-sigma values, per-dimension mean sigma, and the complete
+latent update vector. These diagnostics are printed in the Slurm log and shown
+in `training.png`. Sampling keeps the full-budget history compact enough to
+store and inspect.
 
 ## Running it
 

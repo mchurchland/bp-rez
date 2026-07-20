@@ -17,6 +17,7 @@ class SolarModelBase(nn.Module, ABC):
     """Interface shared by the reservoir adaptation and SciNet reference."""
 
     latent_size: int
+    variational_latent = False
 
     @abstractmethod
     def encode(self, observation: torch.Tensor) -> torch.Tensor:
@@ -36,6 +37,16 @@ class SolarModelBase(nn.Module, ABC):
 
     def forward(self, observation: torch.Tensor, horizon: int) -> torch.Tensor:
         return self.predict_with_latents(observation, horizon)[0]
+
+    def latent_log_sigma(self, observation: torch.Tensor) -> torch.Tensor | None:
+        """Return variational log standard deviations, when the model has them."""
+
+        return None
+
+    def evolution_l2_loss(self) -> torch.Tensor:
+        """Return the released graph's Euler-weight regularizer, when present."""
+
+        return next(self.parameters()).new_zeros(())
 
 
 class SolarReservoir(SolarModelBase):
@@ -156,6 +167,8 @@ class SolarReservoir(SolarModelBase):
 class SolarSciNet(SolarModelBase):
     """PyTorch reference for the active SciNet Copernicus computation graph."""
 
+    variational_latent = True
+
     def __init__(
         self,
         *,
@@ -185,12 +198,17 @@ class SolarSciNet(SolarModelBase):
             nn.ELU(),
             nn.Linear(hidden_size, 2),
         )
+        # The released TensorFlow graph creates and L2-regularizes this matrix,
+        # but its Euler update accidentally ignores the matrix and adds only
+        # the bias. Retaining the unused parameter matches that active graph.
+        self.euler_weight = nn.Parameter(torch.empty(latent_size, latent_size))
         self.latent_delta = nn.Parameter(torch.empty(latent_size))
         generator = torch.Generator(device="cpu").manual_seed(seed)
         for module in self.modules():
             if isinstance(module, nn.Linear):
                 nn.init.xavier_normal_(module.weight, generator=generator)
                 nn.init.normal_(module.bias, std=1.0, generator=generator)
+        nn.init.xavier_normal_(self.euler_weight, generator=generator)
         nn.init.normal_(self.latent_delta, std=1.0, generator=generator)
 
     def _distribution(
@@ -198,10 +216,19 @@ class SolarSciNet(SolarModelBase):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         encoded = self.encoder(observation)
         mean = torch.tanh(encoded[:, : self.latent_size])
-        # The paper describes a clipped log standard deviation. Keeping that
-        # intended bound avoids numerical overflow in modern mixed precision.
-        log_sigma = encoded[:, self.latent_size :].clamp(-5.0, 0.5)
+        # The public TensorFlow source first clips this tensor and immediately
+        # overwrites it with the raw encoder output. The released checkpoint
+        # therefore uses an unrestricted log standard deviation. Reproduce the
+        # active graph literally, including that accidental overwrite.
+        log_sigma = encoded[:, self.latent_size :]
         return mean, log_sigma
+
+    def latent_log_sigma(self, observation: torch.Tensor) -> torch.Tensor:
+        return self._distribution(observation)[1]
+
+    def evolution_l2_loss(self) -> torch.Tensor:
+        # TensorFlow's tf.nn.l2_loss is sum(t ** 2) / 2.
+        return 0.5 * self.euler_weight.square().sum()
 
     def encode(self, observation: torch.Tensor) -> torch.Tensor:
         return self._distribution(observation)[0]
