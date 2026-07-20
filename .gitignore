@@ -3,3 +3,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+/home/milesc/bp-rez/results/scinet-full-reproduction-101633/scinet/seed_0/history.json
+# Generated experiment outputs
+/results/
+slurm-*.out

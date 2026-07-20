@@ -1,0 +1,73 @@
+Job ID: 101633
+Host: orcaga01
+Project: /home/milesc/bp-rez
+Conda environment: bp-reservoir
+Python: /home/milesc/.conda/envs/bp-reservoir/bin/python
+PyTorch: 2.13.0+cu130
+CUDA available: True
+GPU: NVIDIA L40S
+[scinet] seed=0 device=cuda
+    phase=1 step=92750 horizon=20 train_mse=0.576001 validation_mse=0.479161
+    phase=1 step=185500 horizon=20 train_mse=0.469577 validation_mse=0.399259
+    phase=1 step=278250 horizon=20 train_mse=0.368503 validation_mse=0.37982
+    phase=1 step=371000 horizon=20 train_mse=0.45612 validation_mse=0.404364
+    phase=2 step=394000 horizon=20 train_mse=0.402302 validation_mse=0.351236
+    phase=2 step=417000 horizon=20 train_mse=0.375291 validation_mse=0.347548
+    phase=2 step=440000 horizon=20 train_mse=0.442006 validation_mse=0.35235
+    phase=2 step=463000 horizon=20 train_mse=0.399892 validation_mse=0.365363
+    phase=3 step=486000 horizon=50 train_mse=0.421315 validation_mse=0.441186
+    phase=3 step=509000 horizon=50 train_mse=0.437352 validation_mse=0.430915
+    phase=3 step=532000 horizon=50 train_mse=0.426075 validation_mse=0.415478
+    phase=3 step=555000 horizon=50 train_mse=0.453623 validation_mse=0.400727
+    phase=4 step=566500 horizon=50 train_mse=0.398824 validation_mse=0.403381
+    phase=4 step=578000 horizon=50 train_mse=0.380349 validation_mse=0.395163
+    phase=4 step=589500 horizon=50 train_mse=0.356253 validation_mse=0.389645
+    phase=4 step=601000 horizon=50 train_mse=0.364718 validation_mse=0.387641
+    phase=5 step=612500 horizon=50 train_mse=0.341023 validation_mse=0.382153
+    phase=5 step=624000 horizon=50 train_mse=0.347147 validation_mse=0.380509
+    phase=5 step=635500 horizon=50 train_mse=0.351334 validation_mse=0.377952
+    phase=5 step=647000 horizon=50 train_mse=0.342048 validation_mse=0.37256
+    phase=5 step=658500 horizon=50 train_mse=0.317009 validation_mse=0.369344
+    phase=5 step=670000 horizon=50 train_mse=0.34989 validation_mse=0.365989
+    phase=5 step=681500 horizon=50 train_mse=0.340729 validation_mse=0.362324
+    phase=5 step=693000 horizon=50 train_mse=0.309997 validation_mse=0.360414
+    phase=5 step=704500 horizon=50 train_mse=0.341334 validation_mse=0.35672
+    phase=5 step=716000 horizon=50 train_mse=0.334635 validation_mse=0.353729
+    phase=5 step=727500 horizon=50 train_mse=0.318638 validation_mse=0.351131
+    phase=5 step=739000 horizon=50 train_mse=0.32835 validation_mse=0.348099
+    phase=5 step=750500 horizon=50 train_mse=0.330195 validation_mse=0.344821
+    phase=5 step=762000 horizon=50 train_mse=0.32793 validation_mse=0.344256
+    phase=5 step=773500 horizon=50 train_mse=0.331516 validation_mse=0.341638
+    phase=5 step=785000 horizon=50 train_mse=0.321332 validation_mse=0.339226
+    phase=5 step=796500 horizon=50 train_mse=0.305553 validation_mse=0.338696
+    phase=5 step=808000 horizon=50 train_mse=0.328351 validation_mse=0.335846
+    phase=5 step=819500 horizon=50 train_mse=0.305673 validation_mse=0.332655
+    phase=5 step=831000 horizon=50 train_mse=0.299798 validation_mse=0.332491
+    phase=5 step=842500 horizon=50 train_mse=0.290383 validation_mse=0.330582
+    phase=5 step=854000 horizon=50 train_mse=0.299434 validation_mse=0.329147
+    phase=5 step=865500 horizon=50 train_mse=0.322007 validation_mse=0.328675
+    phase=5 step=877000 horizon=50 train_mse=0.311065 validation_mse=0.326705
+    phase=5 step=888500 horizon=50 train_mse=0.288256 validation_mse=0.326893
+    phase=5 step=900000 horizon=50 train_mse=0.300379 validation_mse=0.324116
+    phase=5 step=911500 horizon=50 train_mse=0.283336 validation_mse=0.323655
+    phase=5 step=923000 horizon=50 train_mse=0.319714 validation_mse=0.321799
+    phase=5 step=934500 horizon=50 train_mse=0.304194 validation_mse=0.320686
+    phase=5 step=946000 horizon=50 train_mse=0.289286 validation_mse=0.319831
+    phase=5 step=957500 horizon=50 train_mse=0.291623 validation_mse=0.318658
+    phase=5 step=969000 horizon=50 train_mse=0.296244 validation_mse=0.317402
+    phase=5 step=980500 horizon=50 train_mse=0.301003 validation_mse=0.319759
+    phase=5 step=992000 horizon=50 train_mse=0.273922 validation_mse=0.316689
+    phase=5 step=1003500 horizon=50 train_mse=0.3062 validation_mse=0.315446
+    phase=5 step=1015000 horizon=50 train_mse=0.30958 validation_mse=0.314255
+    phase=5 step=1026500 horizon=50 train_mse=0.300981 validation_mse=0.315033
+    phase=5 step=1038000 horizon=50 train_mse=0.287664 validation_mse=0.312771
+    phase=5 step=1049500 horizon=50 train_mse=0.301865 validation_mse=0.310397
+    phase=5 step=1061000 horizon=50 train_mse=0.302292 validation_mse=0.313237
+    phase=5 step=1072500 horizon=50 train_mse=0.295175 validation_mse=0.311379
+    phase=5 step=1084000 horizon=50 train_mse=0.307617 validation_mse=0.311805
+    phase=5 step=1095500 horizon=50 train_mse=0.299723 validation_mse=0.310834
+    phase=5 step=1107000 horizon=50 train_mse=0.27972 validation_mse=0.307923
+  test RMSE/(2pi)=8.0605% helio->latent R2=0.4192 latent->helio R2=0.4403
+
+Aggregate solar results
+scinet       RMSE/(2pi)=8.0605% helio->latent R2=0.4192 latent->helio R2=0.4403
