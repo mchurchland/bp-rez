@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=solar-latent-60k
+#SBATCH --job-name=solar-balanced-60k
 #SBATCH --output=slurm-%x-%j.out
 #SBATCH --error=slurm-%x-%j.out
 #SBATCH --time=12:00:00
@@ -38,7 +38,7 @@ python -c 'import torch; print("PyTorch:", torch.__version__); print("CUDA avail
 
 srun python -u run_solar_experiment.py \
     --models reservoir scinet \
-    --seeds 0 1 2 \
+    --seeds 0 \
     --latent-size 2 \
     --nodes-1 150 \
     --nodes-2 150 \
@@ -50,10 +50,10 @@ srun python -u run_solar_experiment.py \
     --series-length 50 \
     --delta-days 7 \
     --sampling-mode independent_catalog \
-    --phase-steps 1000 1000 1000 1000 56000 \
+    --phase-steps 20000 5000 5000 3000 27000 \
     --phase-batch-sizes 256 1024 1024 2048 2048 \
     --phase-learning-rates 1e-4 1e-4 1e-4 1e-5 1e-5 \
     --phase-betas 0.1 0.1 0.1 0.01 0.001 \
     --phase-horizons 20 20 50 50 50 \
     --device auto \
-    --output-dir "results/solar-replication-60k-${SLURM_JOB_ID:-local}"
+    --output-dir "results/solar-balanced-60k-${SLURM_JOB_ID:-local}"
