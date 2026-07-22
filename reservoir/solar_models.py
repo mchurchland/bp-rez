@@ -18,6 +18,7 @@ class SolarModelBase(nn.Module, ABC):
 
     latent_size: int
     variational_latent = False
+    uses_mars_dynamics_loss = False
 
     @abstractmethod
     def encode(self, observation: torch.Tensor) -> torch.Tensor:
@@ -50,14 +51,16 @@ class SolarModelBase(nn.Module, ABC):
 
 
 class SolarReservoir(SolarModelBase):
-    """Two-reservoir model with a simply evolving learned bottleneck.
+    """Reservoir stack with a two-dimensional bottleneck between each layer.
 
-    Only ``W``, ``b``, ``latent_delta``, ``W_out``, and ``c`` are trained. The
-    initial Earth-view observation passes through the first reservoir, after
-    which the bottleneck is constrained to evolve by addition of one learned
-    constant per week. The second reservoir carries its recurrent state across
-    forecast weeks and produces features for the trainable linear readout.
+    The initial Earth-view observation passes through the first reservoir. Its
+    bottleneck is constrained to evolve by addition of one learned constant per
+    week. Each later reservoir retains its own recurrent state across forecast
+    weeks and passes a trainable low-dimensional representation to the next
+    reservoir. The final reservoir produces features for the trainable readout.
     """
+
+    uses_mars_dynamics_loss = True
 
     def __init__(
         self,
@@ -74,11 +77,14 @@ class SolarReservoir(SolarModelBase):
         second_reservoir_warmup_steps: int,
         second_reservoir_steps: int,
         seed: int,
+        reservoir_layers: int = 2,
         nonlinear: bool = True,
     ) -> None:
         super().__init__()
         if nodes_1 < 1 or nodes_2 < 1 or latent_size < 1:
             raise ValueError("reservoir and latent sizes must be positive")
+        if reservoir_layers < 2:
+            raise ValueError("reservoir_layers must be at least two")
         if encoder_steps < 1 or second_reservoir_steps < 1:
             raise ValueError(
                 "encoder_steps and second_reservoir_steps must be positive"
@@ -89,6 +95,8 @@ class SolarReservoir(SolarModelBase):
             raise ValueError("leak_rate must be in (0, 1]")
         self.nodes_1 = nodes_1
         self.nodes_2 = nodes_2
+        self.reservoir_layers = reservoir_layers
+        self.reservoir_sizes = (nodes_1,) + (nodes_2,) * (reservoir_layers - 1)
         self.latent_size = latent_size
         self.leak_rate = leak_rate
         self.encoder_steps = encoder_steps
@@ -96,19 +104,37 @@ class SolarReservoir(SolarModelBase):
         self.second_reservoir_steps = second_reservoir_steps
         self.nonlinear = nonlinear
         generator = torch.Generator(device="cpu").manual_seed(seed)
-        self.register_buffer(
-            "A1", make_recurrent_matrix(nodes_1, spectral_radius, density, generator)
-        )
-        self.register_buffer(
-            "A2", make_recurrent_matrix(nodes_2, spectral_radius, density, generator)
-        )
+        recurrent_names = []
+        for layer, nodes in enumerate(self.reservoir_sizes, start=1):
+            name = f"A{layer}"
+            self.register_buffer(
+                name,
+                make_recurrent_matrix(nodes, spectral_radius, density, generator),
+            )
+            recurrent_names.append(name)
+        self._recurrent_names = tuple(recurrent_names)
         self.register_buffer("B1", make_projection(nodes_1, 2, input_scale, generator))
-        self.register_buffer(
-            "R", make_projection(nodes_2, latent_size, interlayer_scale, generator)
-        )
+        projection_names = []
+        for layer, nodes in enumerate(self.reservoir_sizes[1:], start=2):
+            name = "R" if layer == 2 else f"R{layer}"
+            self.register_buffer(
+                name,
+                make_projection(nodes, latent_size, interlayer_scale, generator),
+            )
+            projection_names.append(name)
+        self._projection_names = tuple(projection_names)
         self.W = nn.Parameter(torch.empty(latent_size, nodes_1))
         self.b = nn.Parameter(torch.zeros(latent_size))
         self.latent_delta = nn.Parameter(torch.zeros(latent_size))
+        intermediate_weights = []
+        intermediate_biases = []
+        for nodes in self.reservoir_sizes[1:-1]:
+            weight = nn.Parameter(torch.empty(latent_size, nodes))
+            nn.init.xavier_uniform_(weight, generator=generator)
+            intermediate_weights.append(weight)
+            intermediate_biases.append(nn.Parameter(torch.zeros(latent_size)))
+        self.intermediate_weights = nn.ParameterList(intermediate_weights)
+        self.intermediate_biases = nn.ParameterList(intermediate_biases)
         self.W_out = nn.Parameter(torch.empty(2, nodes_2))
         self.c = nn.Parameter(torch.zeros(2))
         nn.init.xavier_uniform_(self.W, generator=generator)
@@ -116,7 +142,7 @@ class SolarReservoir(SolarModelBase):
 
     @property
     def fixed_matrix_names(self) -> tuple[str, ...]:
-        return ("A1", "A2", "B1", "R")
+        return self._recurrent_names + ("B1",) + self._projection_names
 
     def _update(
         self, state: torch.Tensor, recurrent: torch.Tensor, drive: torch.Tensor
@@ -134,41 +160,82 @@ class SolarReservoir(SolarModelBase):
         latent = state @ self.W.T + self.b
         return torch.tanh(latent) if self.nonlinear else latent
 
-    def _run_second_reservoir(
+    def _run_reservoir_stack(
         self, initial_latent: torch.Tensor, horizon: int
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if horizon < 1:
             raise ValueError("horizon must be positive")
-        latent = initial_latent
-        state = initial_latent.new_zeros((len(initial_latent), self.nodes_2))
-        initial_drive = latent @ self.R.T
-        for _ in range(self.second_reservoir_warmup_steps):
-            state = self._update(state, self.A2, initial_drive)
-        predictions = [state @ self.W_out.T + self.c]
-        latents = [latent]
-        latent = latent + self.latent_delta
-        for _ in range(1, horizon):
-            latents.append(latent)
-            drive = latent @ self.R.T
-            for _ in range(self.second_reservoir_steps):
-                state = self._update(state, self.A2, drive)
-            predictions.append(state @ self.W_out.T + self.c)
-            latent = latent + self.latent_delta
-        return torch.stack(predictions, dim=1), torch.stack(latents, dim=1)
+        states = [
+            initial_latent.new_zeros((len(initial_latent), nodes))
+            for nodes in self.reservoir_sizes[1:]
+        ]
+        predictions = []
+        primary_latents = []
+        all_latents = []
+        primary_latent = initial_latent
+        for time_index in range(horizon):
+            if time_index > 0:
+                primary_latent = primary_latent + self.latent_delta
+            current = primary_latent
+            time_latents = [current]
+            update_count = (
+                self.second_reservoir_warmup_steps
+                if time_index == 0
+                else self.second_reservoir_steps
+            )
+            for layer_index, state in enumerate(states):
+                recurrent = getattr(self, self._recurrent_names[layer_index + 1])
+                projection = getattr(self, self._projection_names[layer_index])
+                drive = current @ projection.T
+                for _ in range(update_count):
+                    state = self._update(state, recurrent, drive)
+                states[layer_index] = state
+                if layer_index < len(self.intermediate_weights):
+                    current = (
+                        state @ self.intermediate_weights[layer_index].T
+                        + self.intermediate_biases[layer_index]
+                    )
+                    if self.nonlinear:
+                        current = torch.tanh(current)
+                    time_latents.append(current)
+                else:
+                    predictions.append(state @ self.W_out.T + self.c)
+            primary_latents.append(primary_latent)
+            all_latents.append(torch.stack(time_latents, dim=1))
+        return (
+            torch.stack(predictions, dim=1),
+            torch.stack(primary_latents, dim=1),
+            torch.stack(all_latents, dim=1),
+        )
 
     def training_forward(
         self, observation: torch.Tensor, horizon: int
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         initial_latent = self.encode(observation)
-        prediction, latents = self._run_second_reservoir(initial_latent, horizon)
+        prediction, latents, all_latents = self._run_reservoir_stack(
+            initial_latent, horizon
+        )
         # Deterministic analogue of SciNet's mean part of the beta-VAE KL.
-        representation_penalty = 0.5 * initial_latent.square().sum(dim=-1).mean()
+        representation_penalty = 0.5 * all_latents.square().sum(dim=-1).mean()
         return prediction, latents, representation_penalty
 
     def predict_with_latents(
         self, observation: torch.Tensor, horizon: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        return self._run_second_reservoir(self.encode(observation), horizon)
+        prediction, primary_latents, _ = self._run_reservoir_stack(
+            self.encode(observation), horizon
+        )
+        return prediction, primary_latents
+
+    def predict_with_all_latents(
+        self, observation: torch.Tensor, horizon: int
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return predictions and every inter-reservoir representation."""
+
+        prediction, _, all_latents = self._run_reservoir_stack(
+            self.encode(observation), horizon
+        )
+        return prediction, all_latents
 
 
 class SolarSciNet(SolarModelBase):
@@ -288,6 +355,7 @@ def build_solar_model(
     *,
     nodes_1: int,
     nodes_2: int,
+    reservoir_layers: int,
     latent_size: int,
     spectral_radius: float,
     input_scale: float,
@@ -304,6 +372,7 @@ def build_solar_model(
         return SolarReservoir(
             nodes_1=nodes_1,
             nodes_2=nodes_2,
+            reservoir_layers=reservoir_layers,
             latent_size=latent_size,
             spectral_radius=spectral_radius,
             input_scale=input_scale,

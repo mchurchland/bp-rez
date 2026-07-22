@@ -12,7 +12,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "bp_reservoir_mpl"))
+os.environ.setdefault(
+    "MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "bp_reservoir_mpl")
+)
 
 import matplotlib
 
@@ -60,6 +62,7 @@ class SolarExperimentConfig:
     sampling_mode: str = "independent_catalog"
     nodes_1: int = 150
     nodes_2: int = 150
+    reservoir_layers: int = 10
     latent_size: int = 2
     encoder_steps: int = 3
     second_reservoir_warmup_steps: int = 20
@@ -75,6 +78,8 @@ class SolarExperimentConfig:
     phase_learning_rates: tuple[float, ...] = (1e-4, 1e-4, 1e-4, 1e-5, 1e-5)
     phase_betas: tuple[float, ...] = (0.1, 0.1, 0.1, 0.01, 0.001)
     phase_horizons: tuple[int, ...] = (20, 20, 50, 50, 50)
+    mars_velocity_loss_weight: float = 1.0
+    mars_curvature_loss_weight: float = 1.0
     euler_l2_coeff: float = 1.0
     full_dataset_epochs: bool = False
     training_log_interval: int = 100
@@ -87,7 +92,9 @@ class SolarExperimentConfig:
 
 
 def _json_dump(path: Path, value: Any) -> None:
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def _validate_config(config: SolarExperimentConfig) -> None:
@@ -106,6 +113,8 @@ def _validate_config(config: SolarExperimentConfig) -> None:
         raise ValueError("test_samples must be at least two for held-out latent fits")
     if config.latent_size < 1:
         raise ValueError("latent_size must be positive")
+    if config.reservoir_layers < 2:
+        raise ValueError("reservoir_layers must be at least two")
     if config.second_reservoir_warmup_steps < 0:
         raise ValueError("second_reservoir_warmup_steps must be nonnegative")
     phase_lengths = {
@@ -123,16 +132,30 @@ def _validate_config(config: SolarExperimentConfig) -> None:
         raise ValueError("phase learning rates must be positive")
     if min(config.phase_betas) < 0.0:
         raise ValueError("phase betas must be nonnegative")
+    if (
+        min(
+            config.mars_velocity_loss_weight,
+            config.mars_curvature_loss_weight,
+        )
+        < 0.0
+    ):
+        raise ValueError("Mars dynamics loss weights must be nonnegative")
     if config.euler_l2_coeff < 0.0:
         raise ValueError("euler_l2_coeff must be nonnegative")
-    if min(config.phase_horizons) < 1 or max(config.phase_horizons) > config.series_length:
+    if (
+        min(config.phase_horizons) < 1
+        or max(config.phase_horizons) > config.series_length
+    ):
         raise ValueError("phase horizons must be between one and series_length")
-    if min(
-        config.validation_interval,
-        config.validation_subset,
-        config.evaluation_batch_size,
-        config.training_log_interval,
-    ) < 1:
+    if (
+        min(
+            config.validation_interval,
+            config.validation_subset,
+            config.evaluation_batch_size,
+            config.training_log_interval,
+        )
+        < 1
+    ):
         raise ValueError(
             "validation_interval, validation_subset, evaluation_batch_size, and "
             "training_log_interval must be positive"
@@ -225,9 +248,9 @@ def _training_diagnostics(
     model.eval()
     with torch.no_grad():
         for start in range(0, count, batch_size):
-            observation = dataset.observation[start : min(start + batch_size, count)].to(
-                device
-            )
+            observation = dataset.observation[
+                start : min(start + batch_size, count)
+            ].to(device)
             log_sigma = model.latent_log_sigma(observation)
             if log_sigma is None:
                 raise RuntimeError("variational model did not return latent log sigma")
@@ -246,6 +269,29 @@ def _training_diagnostics(
         }
     )
     return diagnostics
+
+
+def _mars_dynamics_losses(
+    prediction: torch.Tensor, target: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return MSEs for the Mars angle's discrete velocity and curvature."""
+
+    if prediction.shape != target.shape:
+        raise ValueError("prediction and target must have the same shape")
+    if prediction.ndim != 3 or prediction.shape[-1] != 2:
+        raise ValueError("prediction and target must have shape [batch, time, 2]")
+    zero = prediction.new_zeros(())
+    if prediction.shape[1] < 2:
+        return zero, zero
+    predicted_velocity = torch.diff(prediction[..., 1], dim=1)
+    target_velocity = torch.diff(target[..., 1], dim=1)
+    velocity_loss = nn.functional.mse_loss(predicted_velocity, target_velocity)
+    if prediction.shape[1] < 3:
+        return velocity_loss, zero
+    predicted_curvature = torch.diff(predicted_velocity, dim=1)
+    target_curvature = torch.diff(target_velocity, dim=1)
+    curvature_loss = nn.functional.mse_loss(predicted_curvature, target_curvature)
+    return velocity_loss, curvature_loss
 
 
 def train_solar_model(
@@ -273,8 +319,13 @@ def train_solar_model(
         "diagnostic_step": [],
         "latent_delta": [],
     }
-    regularization_key = "kl_loss" if model.variational_latent else "representation_loss"
+    regularization_key = (
+        "kl_loss" if model.variational_latent else "representation_loss"
+    )
     history[regularization_key] = []
+    if model.uses_mars_dynamics_loss:
+        history["mars_velocity_loss"] = []
+        history["mars_curvature_loss"] = []
     if model.variational_latent:
         history["evolution_l2_loss"] = []
     global_step = 0
@@ -324,21 +375,31 @@ def train_solar_model(
                 observation, horizon
             )
             reconstruction = nn.functional.mse_loss(prediction, target)
+            if model.uses_mars_dynamics_loss:
+                mars_velocity_loss, mars_curvature_loss = _mars_dynamics_losses(
+                    prediction, target
+                )
+            else:
+                mars_velocity_loss = reconstruction.new_zeros(())
+                mars_curvature_loss = reconstruction.new_zeros(())
             evolution_l2_loss = model.evolution_l2_loss()
             loss = (
                 reconstruction
+                + config.mars_velocity_loss_weight * mars_velocity_loss
+                + config.mars_curvature_loss_weight * mars_curvature_loss
                 + beta * representation_penalty
                 + config.euler_l2_coeff * evolution_l2_loss
             )
             loss.backward()
             if config.gradient_clip_value > 0.0:
-                nn.utils.clip_grad_value_(model.parameters(), config.gradient_clip_value)
+                nn.utils.clip_grad_value_(
+                    model.parameters(), config.gradient_clip_value
+                )
             optimizer.step()
 
             validate_now = (
-                (phase_step + 1) % validation_updates == 0
-                or phase_step == phase_updates - 1
-            )
+                phase_step + 1
+            ) % validation_updates == 0 or phase_step == phase_updates - 1
             log_now = (
                 global_step == 1
                 or phase_step == 0
@@ -355,6 +416,13 @@ def train_solar_model(
                 history[regularization_key].append(
                     float(representation_penalty.detach().cpu())
                 )
+                if model.uses_mars_dynamics_loss:
+                    history["mars_velocity_loss"].append(
+                        float(mars_velocity_loss.detach().cpu())
+                    )
+                    history["mars_curvature_loss"].append(
+                        float(mars_curvature_loss.detach().cpu())
+                    )
                 if model.variational_latent:
                     history["evolution_l2_loss"].append(
                         float(evolution_l2_loss.detach().cpu())
@@ -392,6 +460,13 @@ def train_solar_model(
                     f"{float(representation_penalty.detach().cpu()):.6g} "
                     f"validation_mse={validation_mse:.6g}"
                 )
+                if model.uses_mars_dynamics_loss:
+                    message += (
+                        f" mars_velocity_loss="
+                        f"{float(mars_velocity_loss.detach().cpu()):.6g}"
+                        f" mars_curvature_loss="
+                        f"{float(mars_curvature_loss.detach().cpu()):.6g}"
+                    )
                 if model.variational_latent:
                     delta = ", ".join(
                         f"{value:.6g}" for value in final_diagnostics["latent_delta"]
@@ -502,8 +577,7 @@ def latent_diagnostics(
         np.linalg.norm(actual_delta - expected_delta) / max(expected_norm, 1e-12)
     )
     cosine = float(
-        np.dot(actual_delta, expected_delta)
-        / max(actual_norm * expected_norm, 1e-12)
+        np.dot(actual_delta, expected_delta) / max(actual_norm * expected_norm, 1e-12)
     )
     return {
         "heliocentric_to_latent_r2": helio_r2,
@@ -525,7 +599,8 @@ def latent_diagnostics(
 
 def _save_training_plot(history: dict[str, list[Any]], path: Path) -> None:
     variational = "kl_loss" in history
-    row_count = 3 if variational else 1
+    mars_dynamics = "mars_velocity_loss" in history
+    row_count = 3 if variational else 2 if mars_dynamics else 1
     figure, axes = plt.subplots(
         row_count,
         1,
@@ -551,7 +626,22 @@ def _save_training_plot(history: dict[str, list[Any]], path: Path) -> None:
     loss_axis.grid(alpha=0.25)
     loss_axis.legend()
 
-    if variational:
+    if mars_dynamics:
+        dynamics_axis = axes[1, 0]
+        dynamics_axis.semilogy(
+            history["step"],
+            history["mars_velocity_loss"],
+            label="Mars velocity",
+        )
+        dynamics_axis.semilogy(
+            history["step"],
+            history["mars_curvature_loss"],
+            label="Mars curvature",
+        )
+        dynamics_axis.set(xlabel="Optimizer step", ylabel="Unweighted MSE")
+        dynamics_axis.grid(alpha=0.25)
+        dynamics_axis.legend()
+    elif variational:
         regularization_axis = axes[1, 0]
         regularization_axis.semilogy(
             history["step"], history["kl_loss"], label="KL loss"
@@ -637,8 +727,11 @@ def _latent_surface_data(
     model.eval()
     with torch.no_grad():
         latent = model.encode(torch.from_numpy(observation).to(device)).cpu().numpy()
-    return phi_earth, phi_mars, observation, latent.reshape(
-        grid_size, grid_size, model.latent_size
+    return (
+        phi_earth,
+        phi_mars,
+        observation,
+        latent.reshape(grid_size, grid_size, model.latent_size),
     )
 
 
@@ -735,6 +828,7 @@ def run_solar_experiment(
                 model_name,
                 nodes_1=config.nodes_1,
                 nodes_2=config.nodes_2,
+                reservoir_layers=config.reservoir_layers,
                 latent_size=config.latent_size,
                 spectral_radius=config.spectral_radius,
                 input_scale=config.input_scale,
@@ -742,9 +836,7 @@ def run_solar_experiment(
                 density=config.density,
                 leak_rate=config.leak_rate,
                 encoder_steps=config.encoder_steps,
-                second_reservoir_warmup_steps=(
-                    config.second_reservoir_warmup_steps
-                ),
+                second_reservoir_warmup_steps=(config.second_reservoir_warmup_steps),
                 second_reservoir_steps=config.second_reservoir_steps,
                 scinet_hidden_size=config.scinet_hidden_size,
                 seed=seed,
@@ -793,7 +885,10 @@ def run_solar_experiment(
                 "device": str(device),
                 "trainable_parameters": count_trainable_parameters(model),
                 **train_info,
-                **{f"validation_{key}": value for key, value in validation_metrics.items()},
+                **{
+                    f"validation_{key}": value
+                    for key, value in validation_metrics.items()
+                },
                 **{f"test_{key}": value for key, value in test_metrics.items()},
                 **diagnostics,
             }
@@ -803,7 +898,8 @@ def run_solar_experiment(
                     "seed": seed,
                     "config": asdict(config),
                     "state_dict": {
-                        key: value.detach().cpu() for key, value in model.state_dict().items()
+                        key: value.detach().cpu()
+                        for key, value in model.state_dict().items()
                     },
                     "metrics": metrics,
                 },

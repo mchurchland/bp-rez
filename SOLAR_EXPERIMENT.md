@@ -35,31 +35,33 @@ angles is not sufficient evidence that the representation is heliocentric.
 
 ## Reservoir adaptation
 
-The `reservoir` model preserves the project's central design: both recurrent
-weight matrices and input/interlayer projections remain fixed after random
-initialization. Only the bottleneck and final readout are optimized.
+The active `reservoir` model has 10 reservoir layers with 150 neurons each and
+a separate two-neuron bottleneck between every adjacent pair. All recurrent
+matrices and input projections remain fixed after random initialization. The
+nine bottlenecks and final readout are optimized, giving 3,022 trainable
+parameters in the 10-by-150 configuration.
 
 ```text
 x1[k+1] = (1-a)x1[k] + a tanh(A1 x1[k] + B1 observation)
-z[0]    = tanh(W x1[K] + b)
-z[t+1]  = z[t] + delta
-x2 = 0
-repeat K_warmup times: x2 = (1-a)x2 + a tanh(A2 x2 + R z[0])
-yhat[0] = Wout x2 + c
-for t > 0:
-    repeat K_second times: x2 = (1-a)x2 + a tanh(A2 x2 + R z[t])
-    yhat[t] = Wout x2 + c
+z1[0]   = tanh(W1 x1[K] + b1)
+z1[t+1] = z1[t] + delta
+
+for reservoir layers l = 2, ..., 10:
+    xl[t] = recurrent_updates(Al, Rl z(l-1)[t])
+    if l < 10: zl[t] = tanh(Wl xl[t] + bl)
+    if l = 10: yhat[t] = Wout xl[t] + c
 ```
 
-`A1`, `A2`, `B1`, and `R` are fixed. `W`, `b`, `delta`, `Wout`, and `c` are
-trained end to end. The first reservoir is driven for `--encoder-steps` updates
-by the one initial observation. The second reservoir is initialized once and
-receives 20 preliminary updates while `z[0]` is held constant before the first
-readout. It then retains its recurrent state across the complete forecast and
-receives the current latent for `--second-reservoir-steps` recurrent updates per
-week. The preliminary count is configurable with
-`--second-reservoir-warmup-steps`. The default latent-to-second-reservoir input
-scale is `2.0`.
+The first reservoir is driven for `--encoder-steps` updates by the initial
+observation. Its bottleneck is the primary representation used by the
+heliocentric analysis and follows the learned constant update. Each of the
+remaining nine reservoirs is initialized once per trajectory, receives 20
+preliminary updates at week zero, and retains its own state across the complete
+forecast. Each produces the input to the following two-neuron bottleneck. At
+later weeks every downstream reservoir receives three recurrent updates. The
+counts remain configurable with `--second-reservoir-warmup-steps` and
+`--second-reservoir-steps`; `--reservoir-layers` controls the stack depth.
+The latent input scale is `2.0`.
 
 This is a conceptual replication rather than an identical architecture. The
 paper uses fully trainable 100-100 MLP encoder/decoder networks and a beta-VAE;
@@ -126,6 +128,24 @@ The beta term is the original KL divergence for `scinet`. For the deterministic
 reservoir latent, it is a mean-squared activation penalty; this is the closest
 deterministic analogue, not an exact beta-VAE objective.
 
+The current reservoir follow-up adds two Mars trajectory-shape terms to the
+ordinary prediction MSE:
+
+```text
+loss = ordinary MSE
+     + 1.0 * MSE(first difference of predicted and target Mars angles)
+     + 1.0 * MSE(second difference of predicted and target Mars angles)
+     + beta * representation penalty
+```
+
+The first and second differences are the discrete Mars velocity and curvature
+in radians per week and radians per week squared. Their weights are controlled
+by `--mars-velocity-loss-weight` and `--mars-curvature-loss-weight`; both default
+to `1.0`. These terms apply only to the reservoir model, so the SciNet reference
+retains its released objective. Set both weights to `0` for the ordinary-MSE
+reservoir comparison. Validation and best-step tracking continue to use
+ordinary prediction MSE, and `history.json` records both unweighted shape losses.
+
 `history.json` records reconstruction and KL losses every
 `--training-log-interval` optimizer updates (default 100). At each validation
 point it also records the minimum, mean, and maximum latent standard deviation,
@@ -164,7 +184,8 @@ python run_solar_experiment.py \
   --output-dir results/scinet_literal_replication
 ```
 
-The included Slurm script runs five seeds of both models:
+The included Slurm script runs the one-seed, 15,000-update, 10-by-150 reservoir
+shape-loss experiment:
 
 ```bash
 sbatch run_solar_experiment.sbatch

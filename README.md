@@ -80,13 +80,14 @@ baselines, which should be considered when interpreting the accuracy gain.
 
 `run_solar_experiment.py` adapts the solar-system experiment from
 [Iten et al., *Discovering physical concepts with neural networks*](https://arxiv.org/abs/1807.10300)
-to the two-reservoir architecture. From only the initial Earth-view angles of
-the Sun and Mars, the model predicts 50 weekly observations through a learned
-latent state constrained to evolve as `z[t+1] = z[t] + delta`. The default
-two-dimensional bottleneck matches the paper. A PyTorch `scinet` reference is
-included as a protocol check and follows the released TensorFlow graph's active
-behavior, including its overwritten log-sigma clip and unused regularized Euler
-matrix.
+to a 10-layer reservoir architecture with 150 neurons per layer and a
+two-neuron bottleneck between every adjacent pair. From only the initial
+Earth-view angles of the Sun and Mars, the model predicts 50 weekly observations
+through a learned latent state constrained to evolve as
+`z[t+1] = z[t] + delta`. The default two-dimensional bottleneck matches the
+paper. A PyTorch `scinet` reference is included as a protocol check and follows
+the released TensorFlow graph's active behavior, including its overwritten
+log-sigma clip and unused regularized Euler matrix.
 
 The experiment tests two separate claims:
 

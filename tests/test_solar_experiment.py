@@ -9,7 +9,11 @@ from reservoir.solar_data import (
     generate_solar_dataset,
     make_solar_splits,
 )
-from reservoir.solar_experiment import SolarExperimentConfig, run_solar_experiment
+from reservoir.solar_experiment import (
+    SolarExperimentConfig,
+    _mars_dynamics_losses,
+    run_solar_experiment,
+)
 from reservoir.solar_models import SolarReservoir, SolarSciNet
 
 
@@ -97,6 +101,59 @@ def test_solar_forecast_backpropagates_through_second_reservoir():
     assert model.latent_delta.grad is not None
     for name in model.fixed_matrix_names:
         assert getattr(model, name).grad is None
+
+
+def test_ten_reservoir_layers_have_nine_two_neuron_bottlenecks():
+    model = SolarReservoir(
+        nodes_1=6,
+        nodes_2=6,
+        reservoir_layers=10,
+        latent_size=2,
+        spectral_radius=0.8,
+        input_scale=0.4,
+        interlayer_scale=0.7,
+        density=0.5,
+        leak_rate=0.8,
+        encoder_steps=2,
+        second_reservoir_warmup_steps=2,
+        second_reservoir_steps=2,
+        seed=5,
+    )
+    observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
+    prediction, all_latents = model.predict_with_all_latents(observation, horizon=4)
+    assert prediction.shape == (2, 4, 2)
+    assert all_latents.shape == (2, 4, 9, 2)
+    assert len(model.intermediate_weights) == 8
+    assert len(model.fixed_matrix_names) == 20
+
+    _, primary_latents = model.predict_with_latents(observation, horizon=4)
+    expected_delta = model.latent_delta.detach().expand_as(primary_latents[:, 1:])
+    assert torch.allclose(
+        primary_latents[:, 1:] - primary_latents[:, :-1], expected_delta
+    )
+
+
+def test_mars_dynamics_losses_match_first_and_second_differences():
+    target = torch.tensor([[[0.0, 1.0], [0.0, 2.0], [0.0, 4.0], [0.0, 7.0]]])
+    prediction = torch.tensor(
+        [[[5.0, 1.0], [5.0, 3.0], [5.0, 5.0], [5.0, 7.0]]],
+        requires_grad=True,
+    )
+    velocity_loss, curvature_loss = _mars_dynamics_losses(prediction, target)
+    assert torch.isclose(velocity_loss, torch.tensor(2.0 / 3.0))
+    assert torch.isclose(curvature_loss, torch.tensor(1.0))
+    (velocity_loss + curvature_loss).backward()
+    assert prediction.grad is not None
+
+
+def test_mars_dynamics_losses_are_safe_for_short_horizons():
+    one_step = torch.zeros((2, 1, 2))
+    velocity_loss, curvature_loss = _mars_dynamics_losses(one_step, one_step)
+    assert velocity_loss.item() == curvature_loss.item() == 0.0
+
+    two_steps = torch.zeros((2, 2, 2))
+    velocity_loss, curvature_loss = _mars_dynamics_losses(two_steps, two_steps)
+    assert velocity_loss.item() == curvature_loss.item() == 0.0
 
 
 def test_scinet_reference_is_deterministic_at_evaluation():
@@ -195,6 +252,8 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
             assert np.isfinite(metrics["final_latent_sigma_mean"])
         else:
             assert len(history["representation_loss"]) == 2
+            assert len(history["mars_velocity_loss"]) == 2
+            assert len(history["mars_curvature_loss"]) == 2
     assert (output / "config.json").is_file()
     assert (output / "metrics.csv").is_file()
     assert (output / "summary.csv").is_file()

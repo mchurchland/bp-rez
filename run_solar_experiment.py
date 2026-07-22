@@ -34,24 +34,29 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--nodes-1", type=int, default=defaults.nodes_1)
     parser.add_argument("--nodes-2", type=int, default=defaults.nodes_2)
+    parser.add_argument(
+        "--reservoir-layers", type=int, default=defaults.reservoir_layers
+    )
     parser.add_argument("--latent-size", type=int, default=defaults.latent_size)
     parser.add_argument("--encoder-steps", type=int, default=defaults.encoder_steps)
     parser.add_argument(
         "--second-reservoir-warmup-steps",
         type=int,
         default=defaults.second_reservoir_warmup_steps,
-        help="Initial recurrent updates performed while holding z[0] constant",
+        help="Initial updates in each downstream reservoir at week zero",
     )
     parser.add_argument(
         "--second-reservoir-steps",
         type=int,
         default=defaults.second_reservoir_steps,
-        help="Recurrent updates of the second reservoir per forecast week",
+        help="Updates in each downstream reservoir per forecast week",
     )
     parser.add_argument(
         "--scinet-hidden-size", type=int, default=defaults.scinet_hidden_size
     )
-    parser.add_argument("--spectral-radius", type=float, default=defaults.spectral_radius)
+    parser.add_argument(
+        "--spectral-radius", type=float, default=defaults.spectral_radius
+    )
     parser.add_argument("--density", type=float, default=defaults.density)
     parser.add_argument("--leak-rate", type=float, default=defaults.leak_rate)
     parser.add_argument("--input-scale", type=float, default=defaults.input_scale)
@@ -78,6 +83,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--phase-horizons", type=int, nargs="+", default=list(defaults.phase_horizons)
+    )
+    parser.add_argument(
+        "--mars-velocity-loss-weight",
+        type=float,
+        default=defaults.mars_velocity_loss_weight,
+        help="Reservoir-only weight on Mars first-difference MSE",
+    )
+    parser.add_argument(
+        "--mars-curvature-loss-weight",
+        type=float,
+        default=defaults.mars_curvature_loss_weight,
+        help="Reservoir-only weight on Mars second-difference MSE",
     )
     parser.add_argument(
         "--euler-l2-coeff",
@@ -111,7 +128,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--analysis-grid-size", type=int, default=defaults.analysis_grid_size
     )
-    parser.add_argument("--device", default=defaults.device, help="auto, cpu, cuda, or cuda:N")
+    parser.add_argument(
+        "--device", default=defaults.device, help="auto, cpu, cuda, or cuda:N"
+    )
     parser.add_argument(
         "--quick",
         action="store_true",
@@ -148,6 +167,7 @@ def main() -> None:
         sampling_mode=args.sampling_mode,
         nodes_1=args.nodes_1,
         nodes_2=args.nodes_2,
+        reservoir_layers=args.reservoir_layers,
         latent_size=args.latent_size,
         encoder_steps=args.encoder_steps,
         second_reservoir_warmup_steps=args.second_reservoir_warmup_steps,
@@ -163,6 +183,8 @@ def main() -> None:
         phase_learning_rates=tuple(args.phase_learning_rates),
         phase_betas=tuple(args.phase_betas),
         phase_horizons=tuple(args.phase_horizons),
+        mars_velocity_loss_weight=args.mars_velocity_loss_weight,
+        mars_curvature_loss_weight=args.mars_curvature_loss_weight,
         euler_l2_coeff=args.euler_l2_coeff,
         full_dataset_epochs=args.full_dataset_epochs,
         training_log_interval=args.training_log_interval,

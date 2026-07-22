@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=solar-stateful-15k
+#SBATCH --job-name=solar-10x150-shape-15k
 #SBATCH --output=slurm-%x-%j.out
 #SBATCH --error=slurm-%x-%j.out
-#SBATCH --time=00:15:00
+#SBATCH --time=01:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24G
 #SBATCH --gres=gpu:1
@@ -42,6 +42,7 @@ srun python -u run_solar_experiment.py \
     --latent-size 2 \
     --nodes-1 150 \
     --nodes-2 150 \
+    --reservoir-layers 10 \
     --encoder-steps 3 \
     --second-reservoir-warmup-steps 20 \
     --second-reservoir-steps 3 \
@@ -57,6 +58,8 @@ srun python -u run_solar_experiment.py \
     --phase-learning-rates 1e-4 1e-4 1e-4 1e-5 1e-5 \
     --phase-betas 0.1 0.1 0.1 0.01 0.001 \
     --phase-horizons 20 20 50 50 50 \
+    --mars-velocity-loss-weight 1.0 \
+    --mars-curvature-loss-weight 1.0 \
     --training-log-interval 100 \
     --device auto \
-    --output-dir "results/solar-stateful-15k-${SLURM_JOB_ID:-local}"
+    --output-dir "results/solar-10x150-shape-15k-${SLURM_JOB_ID:-local}"
