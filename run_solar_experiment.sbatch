@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=solar-10x150-shape-15k
+#SBATCH --job-name=solar-grid-15k
 #SBATCH --output=slurm-%x-%j.out
 #SBATCH --error=slurm-%x-%j.out
-#SBATCH --time=01:00:00
+#SBATCH --time=10:30:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24G
 #SBATCH --gres=gpu:1
@@ -36,30 +36,11 @@ echo "Project: $PROJECT_DIR"
 echo "Conda environment: $CONDA_ENV"
 python -c 'import torch; print("PyTorch:", torch.__version__); print("CUDA available:", torch.cuda.is_available()); print("GPU:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none")'
 
-srun python -u run_solar_experiment.py \
-    --models reservoir \
-    --seeds 0 \
-    --latent-size 2 \
-    --nodes-1 150 \
-    --nodes-2 150 \
-    --reservoir-layers 10 \
-    --encoder-steps 3 \
-    --second-reservoir-warmup-steps 20 \
-    --second-reservoir-steps 3 \
-    --interlayer-scale 2.0 \
-    --train-samples 95000 \
-    --validation-samples 5000 \
-    --test-samples 5000 \
-    --series-length 50 \
-    --delta-days 7 \
-    --sampling-mode independent_catalog \
-    --phase-steps 1000 1000 1000 1000 11000 \
-    --phase-batch-sizes 256 1024 1024 2048 2048 \
-    --phase-learning-rates 1e-4 1e-4 1e-4 1e-5 1e-5 \
-    --phase-betas 0.1 0.1 0.1 0.01 0.001 \
-    --phase-horizons 20 20 50 50 50 \
-    --mars-velocity-loss-weight 1.0 \
-    --mars-curvature-loss-weight 1.0 \
-    --training-log-interval 100 \
+GRID_OUTPUT_DIR="${GRID_OUTPUT_DIR:-results/solar-grid-15k-${SLURM_JOB_ID:-local}}"
+
+srun python -u run_solar_grid_search.py \
+    --seed 0 \
+    --data-seed 2026 \
+    --time-budget-hours 10 \
     --device auto \
-    --output-dir "results/solar-10x150-shape-15k-${SLURM_JOB_ID:-local}"
+    --output-dir "$GRID_OUTPUT_DIR"

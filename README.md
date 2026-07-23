@@ -104,6 +104,13 @@ python run_solar_experiment.py --quick --device cpu \
   --output-dir results/solar_quick
 ```
 
+The included Slurm job runs a resumable, approximately 10-hour validation grid
+search over the two-layer solar reservoir:
+
+```bash
+sbatch run_solar_experiment.sbatch
+```
+
 Run the five-phase, 15,000-update schedule with the paper's dataset sizes using:
 
 ```bash

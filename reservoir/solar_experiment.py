@@ -197,13 +197,39 @@ def evaluate_solar_model(
     squared_error = (prediction - target) ** 2
     mse = float(np.mean(squared_error))
     rmse = math.sqrt(mse)
+    sun_mse = float(np.mean(squared_error[..., 0]))
+    mars_mse = float(np.mean(squared_error[..., 1]))
+    mars_prediction = prediction[..., 1]
+    mars_target = target[..., 1]
+    if horizon >= 2:
+        predicted_velocity = np.diff(mars_prediction, axis=1)
+        target_velocity = np.diff(mars_target, axis=1)
+        mars_velocity_mse = float(np.mean((predicted_velocity - target_velocity) ** 2))
+    else:
+        predicted_velocity = np.empty((len(prediction), 0), dtype=prediction.dtype)
+        target_velocity = np.empty((len(target), 0), dtype=target.dtype)
+        mars_velocity_mse = 0.0
+    mars_curvature_mse = (
+        float(
+            np.mean(
+                (np.diff(predicted_velocity, axis=1) - np.diff(target_velocity, axis=1))
+                ** 2
+            )
+        )
+        if horizon >= 3
+        else 0.0
+    )
     return (
         {
             "mse": mse,
             "rmse_radians": rmse,
             "relative_rmse_2pi": rmse / (2.0 * np.pi),
-            "sun_rmse_radians": float(np.sqrt(np.mean(squared_error[..., 0]))),
-            "mars_rmse_radians": float(np.sqrt(np.mean(squared_error[..., 1]))),
+            "sun_mse": sun_mse,
+            "mars_mse": mars_mse,
+            "sun_rmse_radians": math.sqrt(sun_mse),
+            "mars_rmse_radians": math.sqrt(mars_mse),
+            "mars_velocity_mse": mars_velocity_mse,
+            "mars_curvature_mse": mars_curvature_mse,
         },
         prediction,
         latents,

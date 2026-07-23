@@ -184,12 +184,45 @@ python run_solar_experiment.py \
   --output-dir results/scinet_literal_replication
 ```
 
-The included Slurm script runs the one-seed, 15,000-update, 10-by-150 reservoir
-shape-loss experiment:
+The included Slurm script runs a one-GPU, time-budgeted grid search:
 
 ```bash
 sbatch run_solar_experiment.sbatch
 ```
+
+The search holds the two-layer, 150-neuron-per-layer architecture, data split,
+model seed, minibatch sampling, and 15,000-update curriculum constant. It
+contains 162 combinations of:
+
+| Setting | Values |
+|---|---|
+| Preliminary updates | 5, 20, 40 |
+| Updates per forecast week | 1, 3, 5 |
+| Interlayer scale | 1, 2, 4 |
+| Velocity/curvature weights | (1, 1), (10, 10), (30, 10) |
+| Reservoir beta schedule | paper schedule, all zeros |
+
+Candidates run sequentially on one GPU until the 10-hour search budget is
+reached. Completed trials are skipped automatically when the same output
+directory is reused. To resume a prior search, submit with its directory:
+
+```bash
+sbatch --export=ALL,GRID_OUTPUT_DIR=results/solar-grid-15k-JOBID \
+  run_solar_experiment.sbatch
+```
+
+`leaderboard.csv` and `leaderboard.json` are rewritten after every successful
+trial. `best_validation_config.json` contains the current winner. Ranking uses
+only
+
+```text
+validation Mars MSE
++ 10 * validation Mars velocity MSE
++ 10 * validation Mars curvature MSE
+```
+
+The grid search does not evaluate the test split. After selecting a
+configuration, rerun it with several seeds and evaluate the test split once.
 
 All schedule values, reservoir hyperparameters, sizes, sampling modes, and
 devices can be changed from the CLI; run `python run_solar_experiment.py --help`.

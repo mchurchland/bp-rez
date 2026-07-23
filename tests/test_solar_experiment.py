@@ -240,6 +240,9 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
             assert (run_dir / filename).is_file()
         metrics = json.loads((run_dir / "metrics.json").read_text())
         assert np.isfinite(metrics["test_relative_rmse_2pi"])
+        assert np.isfinite(metrics["validation_mars_mse"])
+        assert np.isfinite(metrics["validation_mars_velocity_mse"])
+        assert np.isfinite(metrics["validation_mars_curvature_mse"])
         assert np.isfinite(metrics["heliocentric_to_latent_r2"])
         history = json.loads((run_dir / "history.json").read_text())
         assert len(history["step"]) == 2
