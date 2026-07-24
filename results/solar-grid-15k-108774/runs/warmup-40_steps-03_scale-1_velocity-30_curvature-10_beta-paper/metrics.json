@@ -1,0 +1,23 @@
+{
+  "best_validation_mse": 0.11767926812171936,
+  "best_validation_step": 15000,
+  "device": "cuda",
+  "final_latent_delta": [
+    -0.00507465610280633,
+    -0.017009761184453964
+  ],
+  "model": "reservoir",
+  "optimization_steps": 15000,
+  "seed": 0,
+  "trainable_parameters": 606,
+  "training_seconds": 368.4484597980045,
+  "validation_mars_curvature_mse": 2.285207483510021e-05,
+  "validation_mars_mse": 0.20396697521209717,
+  "validation_mars_rmse_radians": 0.45162703109102886,
+  "validation_mars_velocity_mse": 0.001222885213792324,
+  "validation_mse": 0.11499686539173126,
+  "validation_relative_rmse_2pi": 0.053971331548908444,
+  "validation_rmse_radians": 0.3391118773970196,
+  "validation_sun_mse": 0.02602677419781685,
+  "validation_sun_rmse_radians": 0.16132815686611202
+}

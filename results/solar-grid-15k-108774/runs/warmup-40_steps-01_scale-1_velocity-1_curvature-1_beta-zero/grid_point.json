@@ -1,0 +1,8 @@
+{
+  "beta_mode": "zero",
+  "curvature_weight": 1.0,
+  "interlayer_scale": 1.0,
+  "steps_per_week": 1,
+  "velocity_weight": 1.0,
+  "warmup_steps": 40
+}

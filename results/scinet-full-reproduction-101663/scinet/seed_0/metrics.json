@@ -1,0 +1,76 @@
+{
+  "best_validation_mse": 0.3579729497432709,
+  "best_validation_step": 1107000,
+  "device": "cuda",
+  "final_latent_delta": [
+    -1.5447207689285278,
+    -0.49267569184303284
+  ],
+  "final_latent_log_sigma_max": -3.313384771347046,
+  "final_latent_log_sigma_mean": -5.9318037033081055,
+  "final_latent_log_sigma_min": -9.059453010559082,
+  "final_latent_sigma_max": 0.03639278560876846,
+  "final_latent_sigma_mean": 0.004830440506339073,
+  "final_latent_sigma_mean_per_dimension": [
+    0.007128474302589893,
+    0.0025324064772576094
+  ],
+  "final_latent_sigma_min": 0.00011628656648099422,
+  "geocentric_to_latent_r2": 0.3349757820322943,
+  "geocentric_to_latent_r2_per_dimension": [
+    0.48046285806907063,
+    0.17576484442570706
+  ],
+  "heliocentric_fit_coefficients": [
+    [
+      -0.10957222696434858,
+      0.04555316662158127
+    ],
+    [
+      -0.013184780332299473,
+      -0.024132938674696063
+    ],
+    [
+      0.4112879931862478,
+      -0.02973379789492863
+    ]
+  ],
+  "heliocentric_fit_expected_delta": [
+    -0.014047517861761808,
+    0.003944075054185634
+  ],
+  "heliocentric_to_latent_r2": 0.29951551004233945,
+  "heliocentric_to_latent_r2_per_dimension": [
+    0.46628522686537466,
+    0.11701433745313161
+  ],
+  "latent_delta_cosine_similarity": 0.83511085193785,
+  "latent_delta_relative_error": 110.2908714630158,
+  "latent_to_heliocentric_r2": 0.27832687663898137,
+  "latent_to_heliocentric_r2_per_angle": [
+    0.5350272764439472,
+    0.015158792861516335
+  ],
+  "latent_to_heliocentric_rmse_radians": 1.528094689508055,
+  "learned_latent_delta": [
+    -1.5447207689285278,
+    -0.49267569184303284
+  ],
+  "model": "scinet",
+  "optimization_steps": 1107000,
+  "seed": 0,
+  "test_branch_heliocentric_to_latent_r2": 0.2979471016401396,
+  "test_branch_latent_to_heliocentric_r2": 0.2552701418228378,
+  "test_mars_rmse_radians": 0.5653223991394043,
+  "test_mse": 0.3202994465827942,
+  "test_relative_rmse_2pi": 0.09007374624128062,
+  "test_rmse_radians": 0.5659500389458368,
+  "test_sun_rmse_radians": 0.5665768980979919,
+  "trainable_parameters": 21412,
+  "training_seconds": 2395.9381134877913,
+  "validation_mars_rmse_radians": 0.6005457043647766,
+  "validation_mse": 0.34052181243896484,
+  "validation_relative_rmse_2pi": 0.09287366835162437,
+  "validation_rmse_radians": 0.583542468410796,
+  "validation_sun_rmse_radians": 0.5660286545753479
+}

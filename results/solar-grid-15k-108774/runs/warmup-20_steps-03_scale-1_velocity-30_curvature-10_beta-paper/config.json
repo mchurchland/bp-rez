@@ -1,0 +1,76 @@
+{
+  "analysis_grid_size": 35,
+  "data_seed": 2026,
+  "delta_days": 7.0,
+  "density": 0.1,
+  "device": "cuda",
+  "encoder_steps": 3,
+  "euler_l2_coeff": 1.0,
+  "evaluation_batch_size": 1024,
+  "full_dataset_epochs": false,
+  "gradient_clip_value": 10.0,
+  "input_scale": 0.5,
+  "interlayer_scale": 1.0,
+  "latent_size": 2,
+  "leak_rate": 1.0,
+  "lifetime_days": 25657,
+  "mars_curvature_loss_weight": 10.0,
+  "mars_velocity_loss_weight": 30.0,
+  "models": [
+    "reservoir"
+  ],
+  "nodes_1": 150,
+  "nodes_2": 150,
+  "output_dir": "results/solar-grid-15k-108774/runs/warmup-20_steps-03_scale-1_velocity-30_curvature-10_beta-paper",
+  "phase_batch_sizes": [
+    256,
+    1024,
+    1024,
+    2048,
+    2048
+  ],
+  "phase_betas": [
+    0.1,
+    0.1,
+    0.1,
+    0.01,
+    0.001
+  ],
+  "phase_horizons": [
+    20,
+    20,
+    50,
+    50,
+    50
+  ],
+  "phase_learning_rates": [
+    0.0001,
+    0.0001,
+    0.0001,
+    1e-05,
+    1e-05
+  ],
+  "phase_steps": [
+    1000,
+    1000,
+    1000,
+    1000,
+    11000
+  ],
+  "reservoir_layers": 2,
+  "sampling_mode": "independent_catalog",
+  "scinet_hidden_size": 100,
+  "second_reservoir_steps": 3,
+  "second_reservoir_warmup_steps": 20,
+  "seeds": [
+    0
+  ],
+  "series_length": 50,
+  "spectral_radius": 0.9,
+  "test_samples": 5000,
+  "train_samples": 95000,
+  "training_log_interval": 100,
+  "validation_interval": 250,
+  "validation_samples": 5000,
+  "validation_subset": 1024
+}

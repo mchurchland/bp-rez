@@ -1,0 +1,43 @@
+{
+  "candidate_count": 162,
+  "data_seed": 2026,
+  "grid": {
+    "beta_mode": [
+      "paper",
+      "zero"
+    ],
+    "interlayer_scale": [
+      1.0,
+      2.0,
+      4.0
+    ],
+    "shape_loss_weights": [
+      [
+        1.0,
+        1.0
+      ],
+      [
+        10.0,
+        10.0
+      ],
+      [
+        30.0,
+        10.0
+      ]
+    ],
+    "steps_per_week": [
+      1,
+      3,
+      5
+    ],
+    "warmup_steps": [
+      5,
+      20,
+      40
+    ]
+  },
+  "model_seed": 0,
+  "selection_score": "validation_mars_mse + 10 * validation_mars_velocity_mse + 10 * validation_mars_curvature_mse",
+  "selection_uses_test_data": false,
+  "time_budget_hours": 10.0
+}

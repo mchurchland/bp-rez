@@ -1,0 +1,8 @@
+{
+  "beta_mode": "paper",
+  "curvature_weight": 1.0,
+  "interlayer_scale": 4.0,
+  "steps_per_week": 5,
+  "velocity_weight": 1.0,
+  "warmup_steps": 40
+}

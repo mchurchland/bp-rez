@@ -1,0 +1,66 @@
+{
+  "best_validation_mse": 0.2098112851381302,
+  "best_validation_step": 15000,
+  "device": "cuda",
+  "final_latent_delta": [
+    0.012040982022881508,
+    -0.006246063858270645
+  ],
+  "geocentric_to_latent_r2": 0.904949460773635,
+  "geocentric_to_latent_r2_per_dimension": [
+    0.8580528387662878,
+    0.9347808780455602
+  ],
+  "heliocentric_fit_coefficients": [
+    [
+      0.09699046633370015,
+      -0.10618772785745868
+    ],
+    [
+      0.015475459763005447,
+      0.06494801106547683
+    ],
+    [
+      0.16782826064560322,
+      -0.4167166293437177
+    ]
+  ],
+  "heliocentric_fit_expected_delta": [
+    0.012678078209959583,
+    -0.008637414318180981
+  ],
+  "heliocentric_to_latent_r2": 0.8968367631144468,
+  "heliocentric_to_latent_r2_per_dimension": [
+    0.8505320431026031,
+    0.9262916648769699
+  ],
+  "latent_delta_cosine_similarity": 0.992864323651268,
+  "latent_delta_relative_error": 0.1613195194492125,
+  "latent_to_heliocentric_r2": 0.8850418915947086,
+  "latent_to_heliocentric_r2_per_angle": [
+    0.8740275650601461,
+    0.8963337405002749
+  ],
+  "latent_to_heliocentric_rmse_radians": 0.609887602313061,
+  "learned_latent_delta": [
+    0.012040982022881508,
+    -0.006246063858270645
+  ],
+  "model": "reservoir",
+  "optimization_steps": 15000,
+  "seed": 0,
+  "test_branch_heliocentric_to_latent_r2": 0.8216370683873067,
+  "test_branch_latent_to_heliocentric_r2": 0.60296477210337,
+  "test_mars_rmse_radians": 0.5106090903282166,
+  "test_mse": 0.21070340275764465,
+  "test_relative_rmse_2pi": 0.07305600277333954,
+  "test_rmse_radians": 0.45902440322671806,
+  "test_sun_rmse_radians": 0.40085551142692566,
+  "trainable_parameters": 3022,
+  "training_seconds": 3135.6311121145263,
+  "validation_mars_rmse_radians": 0.516211748123169,
+  "validation_mse": 0.21137528121471405,
+  "validation_relative_rmse_2pi": 0.07317238838080733,
+  "validation_rmse_radians": 0.45975567556552693,
+  "validation_sun_rmse_radians": 0.39531758427619934
+}

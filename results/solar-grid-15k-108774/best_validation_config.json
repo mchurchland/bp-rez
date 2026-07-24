@@ -1,0 +1,19 @@
+{
+  "beta_mode": "zero",
+  "curvature_weight": 10.0,
+  "grid_index": 65,
+  "interlayer_scale": 4.0,
+  "run_dir": "results/solar-grid-15k-108774/runs/warmup-40_steps-03_scale-4_velocity-30_curvature-10_beta-zero",
+  "run_name": "warmup-40_steps-03_scale-4_velocity-30_curvature-10_beta-zero",
+  "selection_score": 0.1631263309136557,
+  "steps_per_week": 3,
+  "trainable_parameters": 606,
+  "training_seconds": 369.0614658379927,
+  "validation_mars_curvature_mse": 1.7088381355279125e-05,
+  "validation_mars_mse": 0.15172137320041656,
+  "validation_mars_velocity_mse": 0.0011234073899686337,
+  "validation_mse": 0.09767040610313416,
+  "validation_sun_mse": 0.04361942782998085,
+  "velocity_weight": 30.0,
+  "warmup_steps": 40
+}

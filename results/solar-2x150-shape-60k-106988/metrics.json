@@ -1,0 +1,68 @@
+[
+  {
+    "best_validation_mse": 0.10132011771202087,
+    "best_validation_step": 15000,
+    "device": "cuda",
+    "final_latent_delta": [
+      -0.004970343317836523,
+      -0.010454119183123112
+    ],
+    "geocentric_to_latent_r2": 0.9546251206992892,
+    "geocentric_to_latent_r2_per_dimension": [
+      0.9672316822117356,
+      0.9361900536786824
+    ],
+    "heliocentric_fit_coefficients": [
+      [
+        -0.07407755297780796,
+        -0.04641398143907301
+      ],
+      [
+        0.06322426318711909,
+        -0.07360084422504358
+      ],
+      [
+        -0.17333871334490897,
+        0.2499662576707727
+      ]
+    ],
+    "heliocentric_fit_expected_delta": [
+      -0.004878515106257846,
+      -0.010304984697535402
+    ],
+    "heliocentric_to_latent_r2": 0.9866032801658756,
+    "heliocentric_to_latent_r2_per_dimension": [
+      0.9917505955390921,
+      0.9790761595247574
+    ],
+    "latent_delta_cosine_similarity": 0.9999986179879198,
+    "latent_delta_relative_error": 0.015361103931425401,
+    "latent_to_heliocentric_r2": 0.9871122651066057,
+    "latent_to_heliocentric_r2_per_angle": [
+      0.9962076219802591,
+      0.9777877455680815
+    ],
+    "latent_to_heliocentric_rmse_radians": 0.20420590557776705,
+    "learned_latent_delta": [
+      -0.004970343317836523,
+      -0.010454119183123112
+    ],
+    "model": "reservoir",
+    "optimization_steps": 15000,
+    "seed": 0,
+    "test_branch_heliocentric_to_latent_r2": 0.6438693584671986,
+    "test_branch_latent_to_heliocentric_r2": 0.6657542251028787,
+    "test_mars_rmse_radians": 0.4241778552532196,
+    "test_mse": 0.10103439539670944,
+    "test_relative_rmse_2pi": 0.05058884395344136,
+    "test_rmse_radians": 0.3178590810354636,
+    "test_sun_rmse_radians": 0.14880171418190002,
+    "trainable_parameters": 606,
+    "training_seconds": 378.1548217693344,
+    "validation_mars_rmse_radians": 0.4205954074859619,
+    "validation_mse": 0.09949878603219986,
+    "validation_relative_rmse_2pi": 0.05020292514325783,
+    "validation_rmse_radians": 0.3154342816375542,
+    "validation_sun_rmse_radians": 0.1486508995294571
+  }
+]
