@@ -89,6 +89,14 @@ paper. A PyTorch `scinet` reference is included as a protocol check and follows
 the released TensorFlow graph's active behavior, including its overwritten
 log-sigma clip and unused regularized Euler matrix.
 
+In deep reservoir runs, every later two-dimensional bottleneck is anchored to
+the primary latent by default:
+`z_l = z_1 + 0.1 * tanh(residual_l)`. This prevents fixed downstream
+reservoirs from replacing the physical coordinates with unconstrained warped
+representations. Use `--no-preserve-primary-latent` for the legacy behavior or
+`--intermediate-latent-residual-scale` to change the correction bound. Every
+run records heliocentric and geocentric linear-fit diagnostics at each depth.
+
 The experiment tests two separate claims:
 
 1. prediction: test RMSE divided by `2*pi` (the paper reports below 0.4%); and
@@ -126,6 +134,12 @@ dataset passes, which is millions of optimizer updates. Add
 `--full-dataset-epochs` for that literal reference-model reproduction; it is not
 the practical default. Architecture, sampling, metrics, artifacts, and known
 replication differences are detailed in [SOLAR_EXPERIMENT.md](SOLAR_EXPERIMENT.md).
+
+Run the matched 10-by-150 reservoir with primary-latent preservation using:
+
+```bash
+sbatch run_solar_preserved_10x150.sbatch
+```
 
 ## Setup
 

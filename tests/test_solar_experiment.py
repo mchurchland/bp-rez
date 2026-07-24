@@ -133,6 +133,32 @@ def test_ten_reservoir_layers_have_nine_two_neuron_bottlenecks():
     )
 
 
+def test_primary_latent_is_preserved_by_bounded_intermediate_residuals():
+    residual_scale = 0.1
+    model = SolarReservoir(
+        nodes_1=6,
+        nodes_2=6,
+        reservoir_layers=5,
+        latent_size=2,
+        spectral_radius=0.8,
+        input_scale=0.4,
+        interlayer_scale=0.7,
+        density=0.5,
+        leak_rate=0.8,
+        encoder_steps=2,
+        second_reservoir_warmup_steps=2,
+        second_reservoir_steps=2,
+        seed=5,
+        preserve_primary_latent=True,
+        intermediate_latent_residual_scale=residual_scale,
+    )
+    observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
+    _, all_latents = model.predict_with_all_latents(observation, horizon=4)
+    primary = all_latents[:, :, :1]
+    residuals = all_latents[:, :, 1:] - primary
+    assert torch.max(torch.abs(residuals)) <= residual_scale + 1e-6
+
+
 def test_mars_dynamics_losses_match_first_and_second_differences():
     target = torch.tensor([[[0.0, 1.0], [0.0, 2.0], [0.0, 4.0], [0.0, 7.0]]])
     prediction = torch.tensor(
@@ -244,6 +270,15 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
         assert np.isfinite(metrics["validation_mars_velocity_mse"])
         assert np.isfinite(metrics["validation_mars_curvature_mse"])
         assert np.isfinite(metrics["heliocentric_to_latent_r2"])
+        assert len(metrics["latent_depth_diagnostics"]) == (
+            9 if model_name == "reservoir" else 1
+        )
+        assert np.isclose(
+            metrics["latent_depth_diagnostics"][0][
+                "heliocentric_to_latent_r2"
+            ],
+            metrics["heliocentric_to_latent_r2"],
+        )
         history = json.loads((run_dir / "history.json").read_text())
         assert len(history["step"]) == 2
         assert len(history["reconstruction_loss"]) == 2
@@ -254,6 +289,7 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
             assert len(history["latent_sigma_mean"]) == 1
             assert np.isfinite(metrics["final_latent_sigma_mean"])
         else:
+            assert (run_dir / "latent_r2_by_depth.png").is_file()
             assert len(history["representation_loss"]) == 2
             assert len(history["mars_velocity_loss"]) == 2
             assert len(history["mars_curvature_loss"]) == 2

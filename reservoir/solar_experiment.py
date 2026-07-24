@@ -35,7 +35,12 @@ from .solar_data import (
     earth_view_angles,
     make_solar_splits,
 )
-from .solar_models import SOLAR_MODEL_NAMES, SolarModelBase, build_solar_model
+from .solar_models import (
+    SOLAR_MODEL_NAMES,
+    SolarModelBase,
+    SolarReservoir,
+    build_solar_model,
+)
 
 
 @dataclass
@@ -67,6 +72,8 @@ class SolarExperimentConfig:
     encoder_steps: int = 3
     second_reservoir_warmup_steps: int = 20
     second_reservoir_steps: int = 3
+    preserve_primary_latent: bool = True
+    intermediate_latent_residual_scale: float = 0.1
     scinet_hidden_size: int = 100
     spectral_radius: float = 0.9
     density: float = 0.1
@@ -117,6 +124,10 @@ def _validate_config(config: SolarExperimentConfig) -> None:
         raise ValueError("reservoir_layers must be at least two")
     if config.second_reservoir_warmup_steps < 0:
         raise ValueError("second_reservoir_warmup_steps must be nonnegative")
+    if config.intermediate_latent_residual_scale < 0.0:
+        raise ValueError(
+            "intermediate_latent_residual_scale must be nonnegative"
+        )
     phase_lengths = {
         len(config.phase_steps),
         len(config.phase_batch_sizes),
@@ -183,6 +194,92 @@ def _batched_prediction(
     return np.concatenate(predictions), np.concatenate(latents)
 
 
+def _batched_prediction_with_depth(
+    model: SolarModelBase,
+    dataset: SolarDataset,
+    horizon: int,
+    batch_size: int,
+    device: torch.device,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return predictions, primary trajectories, and every initial 2D latent."""
+
+    predictions = []
+    primary_latents = []
+    initial_latents_by_depth = []
+    model.eval()
+    with torch.no_grad():
+        for start in range(0, len(dataset), batch_size):
+            observation = dataset.observation[start : start + batch_size].to(device)
+            if isinstance(model, SolarReservoir):
+                prediction, all_latents = model.predict_with_all_latents(
+                    observation, horizon
+                )
+                primary = all_latents[:, :, 0]
+                initial_by_depth = all_latents[:, 0]
+            else:
+                prediction, primary = model.predict_with_latents(
+                    observation, horizon
+                )
+                initial_by_depth = primary[:, 0, None, :]
+            predictions.append(prediction.cpu().numpy())
+            primary_latents.append(primary.cpu().numpy())
+            initial_latents_by_depth.append(initial_by_depth.cpu().numpy())
+    return (
+        np.concatenate(predictions),
+        np.concatenate(primary_latents),
+        np.concatenate(initial_latents_by_depth),
+    )
+
+
+def _prediction_metrics(
+    prediction: np.ndarray, target: np.ndarray
+) -> dict[str, float]:
+    squared_error = (prediction - target) ** 2
+    mse = float(np.mean(squared_error))
+    rmse = math.sqrt(mse)
+    sun_mse = float(np.mean(squared_error[..., 0]))
+    mars_mse = float(np.mean(squared_error[..., 1]))
+    mars_prediction = prediction[..., 1]
+    mars_target = target[..., 1]
+    horizon = prediction.shape[1]
+    if horizon >= 2:
+        predicted_velocity = np.diff(mars_prediction, axis=1)
+        target_velocity = np.diff(mars_target, axis=1)
+        mars_velocity_mse = float(
+            np.mean((predicted_velocity - target_velocity) ** 2)
+        )
+    else:
+        predicted_velocity = np.empty(
+            (len(prediction), 0), dtype=prediction.dtype
+        )
+        target_velocity = np.empty((len(target), 0), dtype=target.dtype)
+        mars_velocity_mse = 0.0
+    mars_curvature_mse = (
+        float(
+            np.mean(
+                (
+                    np.diff(predicted_velocity, axis=1)
+                    - np.diff(target_velocity, axis=1)
+                )
+                ** 2
+            )
+        )
+        if horizon >= 3
+        else 0.0
+    )
+    return {
+        "mse": mse,
+        "rmse_radians": rmse,
+        "relative_rmse_2pi": rmse / (2.0 * np.pi),
+        "sun_mse": sun_mse,
+        "mars_mse": mars_mse,
+        "sun_rmse_radians": math.sqrt(sun_mse),
+        "mars_rmse_radians": math.sqrt(mars_mse),
+        "mars_velocity_mse": mars_velocity_mse,
+        "mars_curvature_mse": mars_curvature_mse,
+    }
+
+
 def evaluate_solar_model(
     model: SolarModelBase,
     dataset: SolarDataset,
@@ -194,45 +291,27 @@ def evaluate_solar_model(
         model, dataset, horizon, batch_size, device
     )
     target = dataset.target[:, :horizon].numpy()
-    squared_error = (prediction - target) ** 2
-    mse = float(np.mean(squared_error))
-    rmse = math.sqrt(mse)
-    sun_mse = float(np.mean(squared_error[..., 0]))
-    mars_mse = float(np.mean(squared_error[..., 1]))
-    mars_prediction = prediction[..., 1]
-    mars_target = target[..., 1]
-    if horizon >= 2:
-        predicted_velocity = np.diff(mars_prediction, axis=1)
-        target_velocity = np.diff(mars_target, axis=1)
-        mars_velocity_mse = float(np.mean((predicted_velocity - target_velocity) ** 2))
-    else:
-        predicted_velocity = np.empty((len(prediction), 0), dtype=prediction.dtype)
-        target_velocity = np.empty((len(target), 0), dtype=target.dtype)
-        mars_velocity_mse = 0.0
-    mars_curvature_mse = (
-        float(
-            np.mean(
-                (np.diff(predicted_velocity, axis=1) - np.diff(target_velocity, axis=1))
-                ** 2
-            )
+    return _prediction_metrics(prediction, target), prediction, latents
+
+
+def evaluate_solar_model_with_depth(
+    model: SolarModelBase,
+    dataset: SolarDataset,
+    horizon: int,
+    batch_size: int,
+    device: torch.device,
+) -> tuple[dict[str, float], np.ndarray, np.ndarray, np.ndarray]:
+    prediction, primary_latents, initial_latents_by_depth = (
+        _batched_prediction_with_depth(
+            model, dataset, horizon, batch_size, device
         )
-        if horizon >= 3
-        else 0.0
     )
+    target = dataset.target[:, :horizon].numpy()
     return (
-        {
-            "mse": mse,
-            "rmse_radians": rmse,
-            "relative_rmse_2pi": rmse / (2.0 * np.pi),
-            "sun_mse": sun_mse,
-            "mars_mse": mars_mse,
-            "sun_rmse_radians": math.sqrt(sun_mse),
-            "mars_rmse_radians": math.sqrt(mars_mse),
-            "mars_velocity_mse": mars_velocity_mse,
-            "mars_curvature_mse": mars_curvature_mse,
-        },
+        _prediction_metrics(prediction, target),
         prediction,
-        latents,
+        primary_latents,
+        initial_latents_by_depth,
     )
 
 
@@ -736,7 +815,7 @@ def _save_prediction_plot(
 
 def _latent_surface_data(
     model: SolarModelBase, grid_size: int, device: torch.device
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     values = np.linspace(0.0, 2.0 * np.pi, grid_size, dtype=np.float32)
     phi_earth, phi_mars = np.meshgrid(values, values)
     observation_grid = earth_view_angles(phi_earth, phi_mars)
@@ -752,13 +831,147 @@ def _latent_surface_data(
     observation = observation_grid.reshape(-1, 2)
     model.eval()
     with torch.no_grad():
-        latent = model.encode(torch.from_numpy(observation).to(device)).cpu().numpy()
+        observation_tensor = torch.from_numpy(observation).to(device)
+        if isinstance(model, SolarReservoir):
+            _, all_latents_tensor = model.predict_with_all_latents(
+                observation_tensor, 1
+            )
+            all_latents = all_latents_tensor[:, 0].cpu().numpy()
+            latent = all_latents[:, 0]
+        else:
+            latent = model.encode(observation_tensor).cpu().numpy()
+            all_latents = latent[:, None, :]
     return (
         phi_earth,
         phi_mars,
         observation,
         latent.reshape(grid_size, grid_size, model.latent_size),
+        all_latents.reshape(
+            grid_size,
+            grid_size,
+            all_latents.shape[1],
+            model.latent_size,
+        ),
     )
+
+
+def latent_depth_diagnostics(
+    dataset: SolarDataset,
+    initial_latents_by_depth: np.ndarray,
+    seed: int,
+    chart_phi_earth: np.ndarray,
+    chart_phi_mars: np.ndarray,
+    chart_observation: np.ndarray,
+    chart_latents_by_depth: np.ndarray,
+) -> list[dict[str, Any]]:
+    """Score every explicit 2D bottleneck on identical held-out cells."""
+
+    test_heliocentric = dataset.heliocentric[:, 0].numpy()
+    test_geocentric = dataset.target[:, 0].numpy()
+    test_permutation = np.random.default_rng(seed).permutation(len(dataset))
+    test_split = min(
+        max(1, int(0.8 * len(test_permutation))),
+        len(test_permutation) - 1,
+    )
+    test_train = test_permutation[:test_split]
+    test_holdout = test_permutation[test_split:]
+
+    chart_heliocentric = np.column_stack(
+        (chart_phi_earth.reshape(-1), chart_phi_mars.reshape(-1))
+    )
+    chart_geocentric = chart_observation.reshape(-1, 2)
+    flattened_chart_latents = chart_latents_by_depth.reshape(
+        -1,
+        chart_latents_by_depth.shape[-2],
+        chart_latents_by_depth.shape[-1],
+    )
+    chart_permutation = np.random.default_rng(seed + 1).permutation(
+        len(flattened_chart_latents)
+    )
+    chart_split = min(
+        max(1, int(0.8 * len(chart_permutation))),
+        len(chart_permutation) - 1,
+    )
+    chart_train = chart_permutation[:chart_split]
+    chart_holdout = chart_permutation[chart_split:]
+
+    diagnostics = []
+    for depth_index in range(flattened_chart_latents.shape[1]):
+        chart_latent = flattened_chart_latents[:, depth_index]
+        test_latent = initial_latents_by_depth[:, depth_index]
+        _, helio_to_latent, helio_per_latent, _ = _fit_linear_map(
+            chart_heliocentric,
+            chart_latent,
+            chart_train,
+            chart_holdout,
+        )
+        _, latent_to_helio, helio_per_angle, helio_rmse = _fit_linear_map(
+            chart_latent,
+            chart_heliocentric,
+            chart_train,
+            chart_holdout,
+        )
+        _, geo_to_latent, geo_per_latent, _ = _fit_linear_map(
+            chart_geocentric,
+            chart_latent,
+            chart_train,
+            chart_holdout,
+        )
+        _, latent_to_geo, geo_per_angle, geo_rmse = _fit_linear_map(
+            chart_latent,
+            chart_geocentric,
+            chart_train,
+            chart_holdout,
+        )
+        _, test_helio_to_latent, _, _ = _fit_linear_map(
+            test_heliocentric,
+            test_latent,
+            test_train,
+            test_holdout,
+        )
+        _, test_latent_to_helio, _, _ = _fit_linear_map(
+            test_latent,
+            test_heliocentric,
+            test_train,
+            test_holdout,
+        )
+        _, test_geo_to_latent, _, _ = _fit_linear_map(
+            test_geocentric,
+            test_latent,
+            test_train,
+            test_holdout,
+        )
+        _, test_latent_to_geo, _, _ = _fit_linear_map(
+            test_latent,
+            test_geocentric,
+            test_train,
+            test_holdout,
+        )
+        diagnostics.append(
+            {
+                "latent_index": depth_index + 1,
+                "source_reservoir": depth_index + 1,
+                "heliocentric_to_latent_r2": helio_to_latent,
+                "heliocentric_to_latent_r2_per_dimension": helio_per_latent,
+                "latent_to_heliocentric_r2": latent_to_helio,
+                "latent_to_heliocentric_r2_per_angle": helio_per_angle,
+                "latent_to_heliocentric_rmse_radians": helio_rmse,
+                "geocentric_to_latent_r2": geo_to_latent,
+                "geocentric_to_latent_r2_per_dimension": geo_per_latent,
+                "latent_to_geocentric_r2": latent_to_geo,
+                "latent_to_geocentric_r2_per_angle": geo_per_angle,
+                "latent_to_geocentric_rmse_radians": geo_rmse,
+                "test_branch_heliocentric_to_latent_r2": (
+                    test_helio_to_latent
+                ),
+                "test_branch_latent_to_heliocentric_r2": (
+                    test_latent_to_helio
+                ),
+                "test_branch_geocentric_to_latent_r2": test_geo_to_latent,
+                "test_branch_latent_to_geocentric_r2": test_latent_to_geo,
+            }
+        )
+    return diagnostics
 
 
 def _save_latent_surfaces(
@@ -789,6 +1002,57 @@ def _save_latent_surfaces(
     figure.suptitle("Latent activations over heliocentric state space")
     figure.tight_layout()
     figure.savefig(path, dpi=150)
+    plt.close(figure)
+
+
+def _save_latent_depth_plot(
+    diagnostics: list[dict[str, Any]], path: Path
+) -> None:
+    layers = np.asarray(
+        [row["latent_index"] for row in diagnostics], dtype=np.int64
+    )
+    figure, axes = plt.subplots(1, 2, figsize=(12.5, 4.8), sharey=True)
+    relationships = (
+        (
+            "Heliocentric alignment",
+            "heliocentric_to_latent_r2",
+            "latent_to_heliocentric_r2",
+        ),
+        (
+            "Geocentric alignment",
+            "geocentric_to_latent_r2",
+            "latent_to_geocentric_r2",
+        ),
+    )
+    for axis, (title, forward_key, reverse_key) in zip(
+        axes, relationships, strict=True
+    ):
+        axis.plot(
+            layers,
+            [row[forward_key] for row in diagnostics],
+            marker="o",
+            linewidth=2,
+            label="physical coordinates → latent",
+        )
+        axis.plot(
+            layers,
+            [row[reverse_key] for row in diagnostics],
+            marker="s",
+            linewidth=2,
+            label="latent → physical coordinates",
+        )
+        axis.set(
+            title=title,
+            xlabel="2D latent after reservoir",
+            xticks=layers,
+            ylim=(-0.05, 1.02),
+        )
+        axis.grid(alpha=0.25)
+        axis.legend(frameon=False)
+    axes[0].set_ylabel("Held-out linear-fit $R^2$")
+    figure.suptitle("Physical alignment across reservoir depth")
+    figure.tight_layout()
+    figure.savefig(path, dpi=180)
     plt.close(figure)
 
 
@@ -866,6 +1130,10 @@ def run_solar_experiment(
                 second_reservoir_steps=config.second_reservoir_steps,
                 scinet_hidden_size=config.scinet_hidden_size,
                 seed=seed,
+                preserve_primary_latent=config.preserve_primary_latent,
+                intermediate_latent_residual_scale=(
+                    config.intermediate_latent_residual_scale
+                ),
             )
             run_dir = root / model_name / f"seed_{seed}"
             run_dir.mkdir(parents=True, exist_ok=True)
@@ -884,15 +1152,28 @@ def run_solar_experiment(
                 config.evaluation_batch_size,
                 device,
             )
-            test_metrics, prediction, latents = evaluate_solar_model(
+            (
+                test_metrics,
+                prediction,
+                latents,
+                initial_latents_by_depth,
+            ) = evaluate_solar_model_with_depth(
                 model,
                 splits["test"],
                 config.series_length,
                 config.evaluation_batch_size,
                 device,
             )
-            phi_earth, phi_mars, grid_observation, grid_latent = _latent_surface_data(
-                model, config.analysis_grid_size, device
+            (
+                phi_earth,
+                phi_mars,
+                grid_observation,
+                grid_latent,
+                grid_latents_by_depth,
+            ) = _latent_surface_data(
+                model,
+                config.analysis_grid_size,
+                device,
             )
             diagnostics = latent_diagnostics(
                 model,
@@ -904,6 +1185,15 @@ def run_solar_experiment(
                 phi_mars,
                 grid_observation,
                 grid_latent,
+            )
+            depth_diagnostics = latent_depth_diagnostics(
+                splits["test"],
+                initial_latents_by_depth,
+                config.data_seed + seed,
+                phi_earth,
+                phi_mars,
+                grid_observation,
+                grid_latents_by_depth,
             )
             metrics: dict[str, Any] = {
                 "model": model_name,
@@ -917,6 +1207,7 @@ def run_solar_experiment(
                 },
                 **{f"test_{key}": value for key, value in test_metrics.items()},
                 **diagnostics,
+                "latent_depth_diagnostics": depth_diagnostics,
             }
             torch.save(
                 {
@@ -938,6 +1229,7 @@ def run_solar_experiment(
                 heliocentric=splits["test"].heliocentric.numpy(),
                 prediction=prediction,
                 latent=latents,
+                initial_latents_by_depth=initial_latents_by_depth,
             )
             np.savez_compressed(
                 run_dir / "latent_surface.npz",
@@ -945,6 +1237,7 @@ def run_solar_experiment(
                 phi_mars=phi_mars,
                 observation=grid_observation,
                 latent=grid_latent,
+                all_latents=grid_latents_by_depth,
             )
             _json_dump(run_dir / "history.json", history)
             _json_dump(run_dir / "metrics.json", metrics)
@@ -955,6 +1248,11 @@ def run_solar_experiment(
             _save_latent_surfaces(
                 phi_earth, phi_mars, grid_latent, run_dir / "latent_surfaces.png"
             )
+            if len(depth_diagnostics) > 1:
+                _save_latent_depth_plot(
+                    depth_diagnostics,
+                    run_dir / "latent_r2_by_depth.png",
+                )
             rows.append(metrics)
             _write_csv(root / "metrics.csv", rows)
             _json_dump(root / "metrics.json", rows)

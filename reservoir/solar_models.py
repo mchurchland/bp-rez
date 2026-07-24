@@ -56,8 +56,10 @@ class SolarReservoir(SolarModelBase):
     The initial Earth-view observation passes through the first reservoir. Its
     bottleneck is constrained to evolve by addition of one learned constant per
     week. Each later reservoir retains its own recurrent state across forecast
-    weeks and passes a trainable low-dimensional representation to the next
-    reservoir. The final reservoir produces features for the trainable readout.
+    weeks. Its trainable low-dimensional readout can either replace the
+    preceding representation (the legacy behavior) or provide a bounded
+    residual around the primary physical latent. The final reservoir produces
+    features for the trainable readout.
     """
 
     uses_mars_dynamics_loss = True
@@ -79,6 +81,8 @@ class SolarReservoir(SolarModelBase):
         seed: int,
         reservoir_layers: int = 2,
         nonlinear: bool = True,
+        preserve_primary_latent: bool = False,
+        intermediate_latent_residual_scale: float = 0.1,
     ) -> None:
         super().__init__()
         if nodes_1 < 1 or nodes_2 < 1 or latent_size < 1:
@@ -91,6 +95,10 @@ class SolarReservoir(SolarModelBase):
             )
         if second_reservoir_warmup_steps < 0:
             raise ValueError("second_reservoir_warmup_steps must be nonnegative")
+        if intermediate_latent_residual_scale < 0.0:
+            raise ValueError(
+                "intermediate_latent_residual_scale must be nonnegative"
+            )
         if not 0.0 < leak_rate <= 1.0:
             raise ValueError("leak_rate must be in (0, 1]")
         self.nodes_1 = nodes_1
@@ -103,6 +111,10 @@ class SolarReservoir(SolarModelBase):
         self.second_reservoir_warmup_steps = second_reservoir_warmup_steps
         self.second_reservoir_steps = second_reservoir_steps
         self.nonlinear = nonlinear
+        self.preserve_primary_latent = preserve_primary_latent
+        self.intermediate_latent_residual_scale = (
+            intermediate_latent_residual_scale
+        )
         generator = torch.Generator(device="cpu").manual_seed(seed)
         recurrent_names = []
         for layer, nodes in enumerate(self.reservoir_sizes, start=1):
@@ -191,12 +203,18 @@ class SolarReservoir(SolarModelBase):
                     state = self._update(state, recurrent, drive)
                 states[layer_index] = state
                 if layer_index < len(self.intermediate_weights):
-                    current = (
+                    intermediate = (
                         state @ self.intermediate_weights[layer_index].T
                         + self.intermediate_biases[layer_index]
                     )
-                    if self.nonlinear:
-                        current = torch.tanh(current)
+                    if self.nonlinear or self.preserve_primary_latent:
+                        intermediate = torch.tanh(intermediate)
+                    current = (
+                        primary_latent
+                        + self.intermediate_latent_residual_scale * intermediate
+                        if self.preserve_primary_latent
+                        else intermediate
+                    )
                     time_latents.append(current)
                 else:
                     predictions.append(state @ self.W_out.T + self.c)
@@ -367,6 +385,8 @@ def build_solar_model(
     second_reservoir_steps: int,
     scinet_hidden_size: int,
     seed: int,
+    preserve_primary_latent: bool = False,
+    intermediate_latent_residual_scale: float = 0.1,
 ) -> SolarModelBase:
     if name == "reservoir":
         return SolarReservoir(
@@ -383,6 +403,10 @@ def build_solar_model(
             second_reservoir_warmup_steps=second_reservoir_warmup_steps,
             second_reservoir_steps=second_reservoir_steps,
             seed=seed,
+            preserve_primary_latent=preserve_primary_latent,
+            intermediate_latent_residual_scale=(
+                intermediate_latent_residual_scale
+            ),
         )
     if name == "scinet":
         return SolarSciNet(

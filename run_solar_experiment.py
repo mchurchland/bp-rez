@@ -52,6 +52,21 @@ def parse_args() -> argparse.Namespace:
         help="Updates in each downstream reservoir per forecast week",
     )
     parser.add_argument(
+        "--preserve-primary-latent",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.preserve_primary_latent,
+        help=(
+            "Anchor every intermediate 2D readout to the primary physical "
+            "latent (enabled by default)"
+        ),
+    )
+    parser.add_argument(
+        "--intermediate-latent-residual-scale",
+        type=float,
+        default=defaults.intermediate_latent_residual_scale,
+        help="Maximum residual correction around the primary latent",
+    )
+    parser.add_argument(
         "--scinet-hidden-size", type=int, default=defaults.scinet_hidden_size
     )
     parser.add_argument(
@@ -172,6 +187,10 @@ def main() -> None:
         encoder_steps=args.encoder_steps,
         second_reservoir_warmup_steps=args.second_reservoir_warmup_steps,
         second_reservoir_steps=args.second_reservoir_steps,
+        preserve_primary_latent=args.preserve_primary_latent,
+        intermediate_latent_residual_scale=(
+            args.intermediate_latent_residual_scale
+        ),
         scinet_hidden_size=args.scinet_hidden_size,
         spectral_radius=args.spectral_radius,
         density=args.density,

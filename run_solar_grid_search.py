@@ -262,6 +262,10 @@ def run_trial(
         second_reservoir_steps=config.second_reservoir_steps,
         scinet_hidden_size=config.scinet_hidden_size,
         seed=seed,
+        preserve_primary_latent=config.preserve_primary_latent,
+        intermediate_latent_residual_scale=(
+            config.intermediate_latent_residual_scale
+        ),
     )
     train_info, history = train_solar_model(
         model,

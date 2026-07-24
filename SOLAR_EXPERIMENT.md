@@ -48,7 +48,9 @@ z1[t+1] = z1[t] + delta
 
 for reservoir layers l = 2, ..., 10:
     xl[t] = recurrent_updates(Al, Rl z(l-1)[t])
-    if l < 10: zl[t] = tanh(Wl xl[t] + bl)
+    if l < 10:
+        residual_l[t] = tanh(Wl xl[t] + bl)
+        zl[t] = z1[t] + alpha residual_l[t]
     if l = 10: yhat[t] = Wout xl[t] + c
 ```
 
@@ -62,6 +64,14 @@ later weeks every downstream reservoir receives three recurrent updates. The
 counts remain configurable with `--second-reservoir-warmup-steps` and
 `--second-reservoir-steps`; `--reservoir-layers` controls the stack depth.
 The latent input scale is `2.0`.
+
+By default, `--preserve-primary-latent` sets `alpha=0.1`, so every downstream
+two-neuron readout retains the primary physical coordinates and adds only a
+bounded decoder-specific correction. This direct anchor prevents cumulative
+warping and saturation across repeated two-dimensional compressions. Set
+`--intermediate-latent-residual-scale` to change the bound. The
+`--no-preserve-primary-latent` option restores the legacy behavior
+`zl=tanh(Wl xl+bl)` for reproducing older checkpoints.
 
 This is a conceptual replication rather than an identical architecture. The
 paper uses fully trainable 100-100 MLP encoder/decoder networks and a beta-VAE;
@@ -243,6 +253,11 @@ Each run reports:
 - `latent_delta_cosine_similarity` and `latent_delta_relative_error`: agreement
   between the learned update and the update implied by the heliocentric fit.
 
+For deep reservoirs, `latent_depth_diagnostics` repeats the bidirectional
+heliocentric and geocentric fits for every explicit two-dimensional bottleneck.
+The corresponding `latent_r2_by_depth.png` makes cumulative preservation or
+degradation visible without a separate analysis pass.
+
 The raw test distribution necessarily contains an arbitrary `+/-pi` branch cut
 for cyclic angles. Its intentionally secondary scores are saved as
 `test_branch_heliocentric_to_latent_r2` and
@@ -271,11 +286,14 @@ results/solar_replication/
     ├── predictions.npz
     ├── predictions.png
     ├── latent_surface.npz
+    ├── latent_r2_by_depth.png
     ├── latent_surfaces.png
     └── training.png
 ```
 
 `predictions.npz` stores the Earth-view observations, targets, predictions,
-latent trajectories, and withheld heliocentric states. `latent_surfaces.png`
-is the direct analogue of the paper's Figure 3c; it evaluates the encoder over
-a grid of heliocentric Earth/Mars angles and plots up to four latent dimensions.
+primary latent trajectories, initial latents at every depth, and withheld
+heliocentric states. `latent_surface.npz` stores both the primary surface and
+all depth-wise surfaces. `latent_surfaces.png` is the direct analogue of the
+paper's Figure 3c; it evaluates the encoder over a grid of heliocentric
+Earth/Mars angles and plots up to four primary latent dimensions.
