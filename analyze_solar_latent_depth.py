@@ -22,7 +22,11 @@ import numpy as np
 import torch
 
 from reservoir.solar_data import earth_view_angles, make_solar_splits
-from reservoir.solar_models import SolarReservoir, build_solar_model
+from reservoir.solar_models import (
+    INTERMEDIATE_LATENT_SKIP_MODES,
+    SolarReservoir,
+    build_solar_model,
+)
 
 
 TWO_PI = 2.0 * np.pi
@@ -56,6 +60,11 @@ def parse_args() -> argparse.Namespace:
         type=float,
         help="Override the checkpoint's bounded residual scale",
     )
+    parser.add_argument(
+        "--intermediate-latent-skip-mode",
+        choices=INTERMEDIATE_LATENT_SKIP_MODES,
+        help="Override the checkpoint's intermediate residual mode",
+    )
     args = parser.parse_args()
     if args.batch_size < 1:
         parser.error("--batch-size must be positive")
@@ -74,6 +83,7 @@ def _load_model(
     device: torch.device,
     preserve_primary_latent: bool | None,
     intermediate_latent_residual_scale: float | None,
+    intermediate_latent_skip_mode: str | None,
 ) -> tuple[SolarReservoir, dict[str, Any], int]:
     checkpoint = torch.load(
         run_dir / "checkpoint.pt", map_location="cpu", weights_only=True
@@ -108,10 +118,30 @@ def _load_model(
             if intermediate_latent_residual_scale is None
             else intermediate_latent_residual_scale
         ),
+        intermediate_latent_skip_mode=(
+            config.get("intermediate_latent_skip_mode", "primary")
+            if intermediate_latent_skip_mode is None
+            else intermediate_latent_skip_mode
+        ),
     )
     if not isinstance(model, SolarReservoir):
         raise TypeError("checkpoint does not contain a SolarReservoir")
-    model.load_state_dict(checkpoint["state_dict"])
+    incompatible = model.load_state_dict(checkpoint["state_dict"], strict=False)
+    allowed_missing = (
+        {"intermediate_residual_gates"}
+        if model.intermediate_residual_gates is not None
+        and "intermediate_residual_gates" not in checkpoint["state_dict"]
+        else set()
+    )
+    if (
+        set(incompatible.missing_keys) != allowed_missing
+        or incompatible.unexpected_keys
+    ):
+        raise RuntimeError(
+            "checkpoint state mismatch: "
+            f"missing={incompatible.missing_keys}, "
+            f"unexpected={incompatible.unexpected_keys}"
+        )
     model.to(device).eval()
     return model, config, seed
 
@@ -308,6 +338,7 @@ def main() -> None:
         device,
         args.preserve_primary_latent,
         args.intermediate_latent_residual_scale,
+        args.intermediate_latent_skip_mode,
     )
 
     phi_earth, phi_mars, observation = _phase_grid(args.grid_size)
@@ -354,6 +385,10 @@ def main() -> None:
         "preserve_primary_latent": model.preserve_primary_latent,
         "intermediate_latent_residual_scale": (
             model.intermediate_latent_residual_scale
+        ),
+        "intermediate_latent_skip_mode": model.intermediate_latent_skip_mode,
+        "intermediate_residual_alphas": (
+            model.intermediate_residual_alphas().detach().cpu().tolist()
         ),
         "note": (
             "The final reservoir maps directly to the model output, so a "

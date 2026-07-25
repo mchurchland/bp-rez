@@ -38,8 +38,8 @@ angles is not sufficient evidence that the representation is heliocentric.
 The active `reservoir` model has 10 reservoir layers with 150 neurons each and
 a separate two-neuron bottleneck between every adjacent pair. All recurrent
 matrices and input projections remain fixed after random initialization. The
-nine bottlenecks and final readout are optimized, giving 3,022 trainable
-parameters in the 10-by-150 configuration.
+nine bottlenecks, eight residual gates, and final readout are optimized, giving
+3,030 trainable parameters in the default 10-by-150 configuration.
 
 ```text
 x1[k+1] = (1-a)x1[k] + a tanh(A1 x1[k] + B1 observation)
@@ -50,7 +50,8 @@ for reservoir layers l = 2, ..., 10:
     xl[t] = recurrent_updates(Al, Rl z(l-1)[t])
     if l < 10:
         residual_l[t] = tanh(Wl xl[t] + bl)
-        zl[t] = z1[t] + alpha residual_l[t]
+        alpha_l = alpha_max tanh(gate_l)
+        zl[t] = z(l-1)[t] + alpha_l residual_l[t]
     if l = 10: yhat[t] = Wout xl[t] + c
 ```
 
@@ -65,13 +66,14 @@ counts remain configurable with `--second-reservoir-warmup-steps` and
 `--second-reservoir-steps`; `--reservoir-layers` controls the stack depth.
 The latent input scale is `2.0`.
 
-By default, `--preserve-primary-latent` sets `alpha=0.1`, so every downstream
-two-neuron readout retains the primary physical coordinates and adds only a
-bounded decoder-specific correction. This direct anchor prevents cumulative
-warping and saturation across repeated two-dimensional compressions. Set
-`--intermediate-latent-residual-scale` to change the bound. The
-`--no-preserve-primary-latent` option restores the legacy behavior
-`zl=tanh(Wl xl+bl)` for reproducing older checkpoints.
+By default, `--preserve-primary-latent` and
+`--intermediate-latent-skip-mode sequential` use a separate learnable residual
+gate at each depth. Gates are initialized at zero and bounded by
+`--intermediate-latent-residual-scale` (default `0.1`), giving exact identity
+skips at initialization and controlled sequential refinements during training.
+Set `--intermediate-latent-skip-mode primary` to reproduce the earlier direct
+anchor `zl=z1+0.1*residual_l`. The `--no-preserve-primary-latent` option
+restores the oldest replacement behavior `zl=tanh(Wl xl+bl)`.
 
 This is a conceptual replication rather than an identical architecture. The
 paper uses fully trainable 100-100 MLP encoder/decoder networks and a beta-VAE;

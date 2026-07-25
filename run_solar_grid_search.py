@@ -266,6 +266,7 @@ def run_trial(
         intermediate_latent_residual_scale=(
             config.intermediate_latent_residual_scale
         ),
+        intermediate_latent_skip_mode=config.intermediate_latent_skip_mode,
     )
     train_info, history = train_solar_model(
         model,

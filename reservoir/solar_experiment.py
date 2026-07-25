@@ -36,6 +36,7 @@ from .solar_data import (
     make_solar_splits,
 )
 from .solar_models import (
+    INTERMEDIATE_LATENT_SKIP_MODES,
     SOLAR_MODEL_NAMES,
     SolarModelBase,
     SolarReservoir,
@@ -74,6 +75,7 @@ class SolarExperimentConfig:
     second_reservoir_steps: int = 3
     preserve_primary_latent: bool = True
     intermediate_latent_residual_scale: float = 0.1
+    intermediate_latent_skip_mode: str = "sequential"
     scinet_hidden_size: int = 100
     spectral_radius: float = 0.9
     density: float = 0.1
@@ -127,6 +129,14 @@ def _validate_config(config: SolarExperimentConfig) -> None:
     if config.intermediate_latent_residual_scale < 0.0:
         raise ValueError(
             "intermediate_latent_residual_scale must be nonnegative"
+        )
+    if (
+        config.intermediate_latent_skip_mode
+        not in INTERMEDIATE_LATENT_SKIP_MODES
+    ):
+        raise ValueError(
+            "intermediate_latent_skip_mode must be one of "
+            f"{INTERMEDIATE_LATENT_SKIP_MODES}"
         )
     phase_lengths = {
         len(config.phase_steps),
@@ -345,6 +355,12 @@ def _training_diagnostics(
     diagnostics: dict[str, Any] = {
         "latent_delta": model.latent_delta.detach().cpu().tolist(),
     }
+    if isinstance(model, SolarReservoir):
+        alphas = model.intermediate_residual_alphas()
+        if len(alphas) > 0:
+            diagnostics["intermediate_residual_alphas"] = (
+                alphas.detach().cpu().tolist()
+            )
     if not model.variational_latent:
         return diagnostics
 
@@ -571,6 +587,15 @@ def train_solar_model(
                         f"{float(mars_velocity_loss.detach().cpu()):.6g}"
                         f" mars_curvature_loss="
                         f"{float(mars_curvature_loss.detach().cpu()):.6g}"
+                    )
+                if "intermediate_residual_alphas" in final_diagnostics:
+                    alphas = np.asarray(
+                        final_diagnostics["intermediate_residual_alphas"]
+                    )
+                    message += (
+                        f" residual_alpha[min/mean/max]="
+                        f"{alphas.min():.3g}/{alphas.mean():.3g}/"
+                        f"{alphas.max():.3g}"
                     )
                 if model.variational_latent:
                     delta = ", ".join(
@@ -1133,6 +1158,9 @@ def run_solar_experiment(
                 preserve_primary_latent=config.preserve_primary_latent,
                 intermediate_latent_residual_scale=(
                     config.intermediate_latent_residual_scale
+                ),
+                intermediate_latent_skip_mode=(
+                    config.intermediate_latent_skip_mode
                 ),
             )
             run_dir = root / model_name / f"seed_{seed}"

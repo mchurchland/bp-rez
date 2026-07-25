@@ -89,13 +89,15 @@ paper. A PyTorch `scinet` reference is included as a protocol check and follows
 the released TensorFlow graph's active behavior, including its overwritten
 log-sigma clip and unused regularized Euler matrix.
 
-In deep reservoir runs, every later two-dimensional bottleneck is anchored to
-the primary latent by default:
-`z_l = z_1 + 0.1 * tanh(residual_l)`. This prevents fixed downstream
-reservoirs from replacing the physical coordinates with unconstrained warped
-representations. Use `--no-preserve-primary-latent` for the legacy behavior or
-`--intermediate-latent-residual-scale` to change the correction bound. Every
-run records heliocentric and geocentric linear-fit diagnostics at each depth.
+In deep reservoir runs, every later two-dimensional bottleneck uses a
+sequential gated residual by default:
+`z_(l+1) = z_l + alpha_l * tanh(residual_l)`. Each bounded trainable
+`alpha_l` starts at zero, so optimization begins with exact identity skips and
+opens refinements only when they help prediction. Use
+`--intermediate-latent-skip-mode primary` for the earlier direct anchor to
+`z_1`, `--no-preserve-primary-latent` for the replacement behavior, or
+`--intermediate-latent-residual-scale` to change the gate bound. Every run
+records heliocentric and geocentric linear-fit diagnostics at each depth.
 
 The experiment tests two separate claims:
 
@@ -139,6 +141,12 @@ Run the matched 10-by-150 reservoir with primary-latent preservation using:
 
 ```bash
 sbatch run_solar_preserved_10x150.sbatch
+```
+
+Run the sequential gated-residual version using:
+
+```bash
+sbatch run_solar_sequential_10x150.sbatch
 ```
 
 ## Setup

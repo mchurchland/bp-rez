@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=solar-10x150-hold
+#SBATCH --job-name=solar-10x150-jump
 #SBATCH --output=slurm-%x-%j.out
 #SBATCH --error=slurm-%x-%j.out
 #SBATCH --time=03:00:00
@@ -8,12 +8,12 @@
 #SBATCH --gres=gpu:1
 
 # Submit with:
-#   sbatch run_solar_preserved_10x150.sbatch
+#   sbatch run_solar_sequential_10x150.sbatch
 #
 # Optional overrides:
-#   CONDA_ENV=base sbatch run_solar_preserved_10x150.sbatch
+#   CONDA_ENV=base sbatch run_solar_sequential_10x150.sbatch
 #   sbatch --export=ALL,SOLAR_OUTPUT_DIR=results/my-run \
-#     run_solar_preserved_10x150.sbatch
+#     run_solar_sequential_10x150.sbatch
 
 # Some cluster Conda distributions have deactivate hooks that read optional
 # variables without defaults. Enable nounset only after Conda activation.
@@ -44,7 +44,7 @@ echo "Conda environment: $CONDA_ENV"
 echo "Python: $(command -v python)"
 python -c 'import torch; print("PyTorch:", torch.__version__); print("CUDA available:", torch.cuda.is_available()); print("GPU:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none")'
 
-SOLAR_OUTPUT_DIR="${SOLAR_OUTPUT_DIR:-results/solar-10x150-preserved-15k-${SLURM_JOB_ID:-local}}"
+SOLAR_OUTPUT_DIR="${SOLAR_OUTPUT_DIR:-results/solar-10x150-sequential-15k-${SLURM_JOB_ID:-local}}"
 echo "Output: $SOLAR_OUTPUT_DIR"
 
 srun python -u run_solar_experiment.py \
@@ -66,7 +66,7 @@ srun python -u run_solar_experiment.py \
     --second-reservoir-warmup-steps 20 \
     --second-reservoir-steps 3 \
     --preserve-primary-latent \
-    --intermediate-latent-skip-mode primary \
+    --intermediate-latent-skip-mode sequential \
     --intermediate-latent-residual-scale 0.1 \
     --spectral-radius 0.9 \
     --density 0.1 \

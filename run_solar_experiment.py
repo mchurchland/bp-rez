@@ -7,7 +7,10 @@ import argparse
 
 from reservoir.solar_data import SOLAR_SAMPLING_MODES
 from reservoir.solar_experiment import SolarExperimentConfig, run_solar_experiment
-from reservoir.solar_models import SOLAR_MODEL_NAMES
+from reservoir.solar_models import (
+    INTERMEDIATE_LATENT_SKIP_MODES,
+    SOLAR_MODEL_NAMES,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -56,15 +59,24 @@ def parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=defaults.preserve_primary_latent,
         help=(
-            "Anchor every intermediate 2D readout to the primary physical "
-            "latent (enabled by default)"
+            "Retain the physical latent through bounded intermediate residual "
+            "connections (enabled by default)"
         ),
     )
     parser.add_argument(
         "--intermediate-latent-residual-scale",
         type=float,
         default=defaults.intermediate_latent_residual_scale,
-        help="Maximum residual correction around the primary latent",
+        help="Maximum magnitude of each intermediate residual gate",
+    )
+    parser.add_argument(
+        "--intermediate-latent-skip-mode",
+        choices=INTERMEDIATE_LATENT_SKIP_MODES,
+        default=defaults.intermediate_latent_skip_mode,
+        help=(
+            "Use fixed jumps from the primary latent or sequential learnable "
+            "residual jumps"
+        ),
     )
     parser.add_argument(
         "--scinet-hidden-size", type=int, default=defaults.scinet_hidden_size
@@ -191,6 +203,7 @@ def main() -> None:
         intermediate_latent_residual_scale=(
             args.intermediate_latent_residual_scale
         ),
+        intermediate_latent_skip_mode=args.intermediate_latent_skip_mode,
         scinet_hidden_size=args.scinet_hidden_size,
         spectral_radius=args.spectral_radius,
         density=args.density,

@@ -151,12 +151,54 @@ def test_primary_latent_is_preserved_by_bounded_intermediate_residuals():
         seed=5,
         preserve_primary_latent=True,
         intermediate_latent_residual_scale=residual_scale,
+        intermediate_latent_skip_mode="primary",
     )
     observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
     _, all_latents = model.predict_with_all_latents(observation, horizon=4)
     primary = all_latents[:, :, :1]
     residuals = all_latents[:, :, 1:] - primary
     assert torch.max(torch.abs(residuals)) <= residual_scale + 1e-6
+
+
+def test_sequential_latents_use_bounded_learnable_residual_gates():
+    residual_scale = 0.1
+    model = SolarReservoir(
+        nodes_1=6,
+        nodes_2=6,
+        reservoir_layers=5,
+        latent_size=2,
+        spectral_radius=0.8,
+        input_scale=0.4,
+        interlayer_scale=0.7,
+        density=0.5,
+        leak_rate=0.8,
+        encoder_steps=2,
+        second_reservoir_warmup_steps=2,
+        second_reservoir_steps=2,
+        seed=5,
+        preserve_primary_latent=True,
+        intermediate_latent_residual_scale=residual_scale,
+        intermediate_latent_skip_mode="sequential",
+    )
+    observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
+
+    _, initial_latents = model.predict_with_all_latents(observation, horizon=4)
+    assert torch.equal(
+        initial_latents,
+        initial_latents[:, :, :1].expand_as(initial_latents),
+    )
+
+    with torch.no_grad():
+        model.intermediate_residual_gates.fill_(0.5)
+    _, all_latents = model.predict_with_all_latents(observation, horizon=4)
+    successive_residuals = all_latents[:, :, 1:] - all_latents[:, :, :-1]
+    assert torch.max(torch.abs(successive_residuals)) <= residual_scale + 1e-6
+    assert torch.count_nonzero(successive_residuals).item() > 0
+
+    prediction, _, penalty = model.training_forward(observation, horizon=4)
+    (prediction.square().mean() + 0.01 * penalty).backward()
+    assert model.intermediate_residual_gates.grad is not None
+    assert torch.count_nonzero(model.intermediate_residual_gates.grad).item() > 0
 
 
 def test_mars_dynamics_losses_match_first_and_second_differences():
@@ -290,6 +332,7 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
             assert np.isfinite(metrics["final_latent_sigma_mean"])
         else:
             assert (run_dir / "latent_r2_by_depth.png").is_file()
+            assert len(metrics["final_intermediate_residual_alphas"]) == 8
             assert len(history["representation_loss"]) == 2
             assert len(history["mars_velocity_loss"]) == 2
             assert len(history["mars_curvature_loss"]) == 2

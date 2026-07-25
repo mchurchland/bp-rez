@@ -1,0 +1,480 @@
+{
+  "explicit_2d_latents": 9,
+  "grid_scores": [
+    {
+      "geocentric_to_latent_r2": 0.9357926962221952,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.9097877301471858,
+        0.9524774779054981
+      ],
+      "heliocentric_to_latent_r2": 0.9549854998429831,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.9430424373121742,
+        0.962648166672919
+      ],
+      "latent_index": 1,
+      "latent_to_geocentric_r2": 0.9275102512917947,
+      "latent_to_geocentric_r2_per_angle": [
+        0.9429745191966787,
+        0.9125123565849931
+      ],
+      "latent_to_geocentric_rmse_radians": 0.4910813096008913,
+      "latent_to_heliocentric_r2": 0.9618013093077368,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.9429745191966787,
+        0.981102461634419
+      ],
+      "latent_to_heliocentric_rmse_radians": 0.35156383755839743,
+      "source_reservoir": 1
+    },
+    {
+      "geocentric_to_latent_r2": 0.7614968838923126,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.8742746253383411,
+        0.5795564442165704
+      ],
+      "heliocentric_to_latent_r2": 0.7934785289620954,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.8991846620637766,
+        0.6229464710724076
+      ],
+      "latent_index": 2,
+      "latent_to_geocentric_r2": 0.714408027273503,
+      "latent_to_geocentric_r2_per_angle": [
+        0.8260958235440979,
+        0.6060885246107195
+      ],
+      "latent_to_geocentric_rmse_radians": 0.974738469303286,
+      "latent_to_heliocentric_r2": 0.7403304298210279,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.8260958235440979,
+        0.6524040802499151
+      ],
+      "latent_to_heliocentric_rmse_radians": 0.916622444875417,
+      "source_reservoir": 2
+    },
+    {
+      "geocentric_to_latent_r2": 0.5962971591571402,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.6800213034302869,
+        0.5471796420128091
+      ],
+      "heliocentric_to_latent_r2": 0.6417498024700791,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.7300116656069462,
+        0.5899701920189736
+      ],
+      "latent_index": 3,
+      "latent_to_geocentric_r2": 0.6732566506223916,
+      "latent_to_geocentric_r2_per_angle": [
+        0.8125951961836755,
+        0.5381202931963154
+      ],
+      "latent_to_geocentric_rmse_radians": 1.042601838736601,
+      "latent_to_heliocentric_r2": 0.7020805331107993,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.8125951961836755,
+        0.5887813284286008
+      ],
+      "latent_to_heliocentric_rmse_radians": 0.981814403266392,
+      "source_reservoir": 3
+    },
+    {
+      "geocentric_to_latent_r2": 0.5860941916393656,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.7757475728122394,
+        0.5245197816826144
+      ],
+      "heliocentric_to_latent_r2": 0.6392173297203885,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.7780261926893448,
+        0.5941505147697488
+      ],
+      "latent_index": 4,
+      "latent_to_geocentric_r2": 0.5712296955996989,
+      "latent_to_geocentric_r2_per_angle": [
+        0.6449768294238714,
+        0.4997066364528755
+      ],
+      "latent_to_geocentric_rmse_radians": 1.1943385709290963,
+      "latent_to_heliocentric_r2": 0.6047974395827316,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.6449768294238714,
+        0.5636056846875893
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.1308105006130664,
+      "source_reservoir": 4
+    },
+    {
+      "geocentric_to_latent_r2": 0.5829212461548596,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.5415986390573757,
+        0.598697783516987
+      ],
+      "heliocentric_to_latent_r2": 0.6354083159790667,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.5972761405502991,
+        0.6499667800404443
+      ],
+      "latent_index": 5,
+      "latent_to_geocentric_r2": 0.6452809263437753,
+      "latent_to_geocentric_r2_per_angle": [
+        0.7625310007841148,
+        0.5315668933461013
+      ],
+      "latent_to_geocentric_rmse_radians": 1.0863190087563184,
+      "latent_to_heliocentric_r2": 0.6758879872606586,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.7625310007841148,
+        0.5870619052682331
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.0240649964162043,
+      "source_reservoir": 5
+    },
+    {
+      "geocentric_to_latent_r2": 0.6007399775265794,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.5902288749478071,
+        0.6123253607176264
+      ],
+      "heliocentric_to_latent_r2": 0.6372760207882819,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.6219122750190256,
+        0.6542100085077183
+      ],
+      "latent_index": 6,
+      "latent_to_geocentric_r2": 0.7177248618166971,
+      "latent_to_geocentric_r2_per_angle": [
+        0.8556360415182969,
+        0.5839728235839574
+      ],
+      "latent_to_geocentric_rmse_radians": 0.9690616847516524,
+      "latent_to_heliocentric_r2": 0.7393821677630484,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.8556360415182969,
+        0.620199146510848
+      ],
+      "latent_to_heliocentric_rmse_radians": 0.9182945818836322,
+      "source_reservoir": 6
+    },
+    {
+      "geocentric_to_latent_r2": 0.6860843174030402,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.49986311616775947,
+        0.7636553913325128
+      ],
+      "heliocentric_to_latent_r2": 0.7169489081654854,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.5565415807418508,
+        0.7837671252743249
+      ],
+      "latent_index": 7,
+      "latent_to_geocentric_r2": 0.5810095227741661,
+      "latent_to_geocentric_r2_per_angle": [
+        0.5290629081377864,
+        0.6313895253376989
+      ],
+      "latent_to_geocentric_rmse_radians": 1.1806391612125662,
+      "latent_to_heliocentric_r2": 0.5815041440446165,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.5290629081377864,
+        0.6352666960498412
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.163658480177001,
+      "source_reservoir": 7
+    },
+    {
+      "geocentric_to_latent_r2": 0.7771301084283246,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.7794834395191299,
+        0.5238327953728673
+      ],
+      "heliocentric_to_latent_r2": 0.7791561939858789,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.7814862707190626,
+        0.5283618293363621
+      ],
+      "latent_index": 8,
+      "latent_to_geocentric_r2": 0.556458139193128,
+      "latent_to_geocentric_r2_per_angle": [
+        0.4475927168238383,
+        0.662040385436445
+      ],
+      "latent_to_geocentric_rmse_radians": 1.214737434417363,
+      "latent_to_heliocentric_r2": 0.5529408828947664,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.4475927168238383,
+        0.6609434148546525
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.2027141926572036,
+      "source_reservoir": 8
+    },
+    {
+      "geocentric_to_latent_r2": 0.791202936626455,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.82022326677474,
+        0.7097412360931079
+      ],
+      "heliocentric_to_latent_r2": 0.7737131327226989,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.8032022759337792,
+        0.6909354475285154
+      ],
+      "latent_index": 9,
+      "latent_to_geocentric_r2": 0.8301496529700743,
+      "latent_to_geocentric_r2_per_angle": [
+        0.9480517936657973,
+        0.7158032188073238
+      ],
+      "latent_to_geocentric_rmse_radians": 0.7517065378754282,
+      "latent_to_heliocentric_r2": 0.8234453257000267,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.9480517936657973,
+        0.6956992572034868
+      ],
+      "latent_to_heliocentric_rmse_radians": 0.7558220677540051,
+      "source_reservoir": 9
+    }
+  ],
+  "initial_grid_output_mse": 0.5116590545440037,
+  "initial_test_output_mse": 0.4760680692375034,
+  "note": "The final reservoir maps directly to the model output, so a 10-reservoir model has nine explicit 2D latent readouts.",
+  "reservoir_layers": 10,
+  "run_dir": "results/solar-10x150-shape-15k-106370/reservoir/seed_0",
+  "test_branch_scores": [
+    {
+      "geocentric_to_latent_r2": 0.9251163357001914,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.889092437026192,
+        0.9451928094740448
+      ],
+      "heliocentric_to_latent_r2": 0.7419997421774489,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.5776707122394691,
+        0.833581930149064
+      ],
+      "latent_index": 1,
+      "latent_to_geocentric_r2": 0.9216797590264666,
+      "latent_to_geocentric_r2_per_angle": [
+        0.9294517866020556,
+        0.9139386165636775
+      ],
+      "latent_to_geocentric_rmse_radians": 0.5064803404564415,
+      "latent_to_heliocentric_r2": 0.608707375356141,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.9294517866020556,
+        0.28985089620725746
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.1326235209682824,
+      "source_reservoir": 1
+    },
+    {
+      "geocentric_to_latent_r2": 0.7595187662033214,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.8538504036601575,
+        0.6079633419092589
+      ],
+      "heliocentric_to_latent_r2": 0.5543345759332627,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.7481863288345019,
+        0.24288779674915018
+      ],
+      "latent_index": 2,
+      "latent_to_geocentric_r2": 0.7225180336455179,
+      "latent_to_geocentric_r2_per_angle": [
+        0.7983816580738836,
+        0.6469558822336972
+      ],
+      "latent_to_geocentric_rmse_radians": 0.9533293562960555,
+      "latent_to_heliocentric_r2": 0.5118533143003358,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.7983816580738836,
+        0.2270115035978334
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.2650564863641938,
+      "source_reservoir": 2
+    },
+    {
+      "geocentric_to_latent_r2": 0.6156591684570489,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.6811704750366088,
+        0.5721511824461947
+      ],
+      "heliocentric_to_latent_r2": 0.3644614038942142,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.5382159969919055,
+        0.24906586684084808
+      ],
+      "latent_index": 3,
+      "latent_to_geocentric_r2": 0.6924761391327083,
+      "latent_to_geocentric_r2_per_angle": [
+        0.8068305817835649,
+        0.5785761274300305
+      ],
+      "latent_to_geocentric_rmse_radians": 1.0036100327595912,
+      "latent_to_heliocentric_r2": 0.5168163478439026,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.8068305817835649,
+        0.22850916525619924
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.2586090821543803,
+      "source_reservoir": 3
+    },
+    {
+      "geocentric_to_latent_r2": 0.5861150668951166,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.6965067486225067,
+        0.5553678457203702
+      ],
+      "heliocentric_to_latent_r2": 0.3913108604945039,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.6991774867110983,
+        0.3055612541792311
+      ],
+      "latent_index": 4,
+      "latent_to_geocentric_r2": 0.5469617312595834,
+      "latent_to_geocentric_r2_per_angle": [
+        0.5594066273969636,
+        0.534566289658648
+      ],
+      "latent_to_geocentric_rmse_radians": 1.2181282899904105,
+      "latent_to_heliocentric_r2": 0.39213740875348935,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.5594066273969636,
+        0.22585275263285276
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.411683874314969,
+      "source_reservoir": 4
+    },
+    {
+      "geocentric_to_latent_r2": 0.6087816015828658,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.5718312906700479,
+        0.6233245576817875
+      ],
+      "heliocentric_to_latent_r2": 0.3657389902556307,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.2941278104962175,
+        0.39392382057790754
+      ],
+      "latent_index": 5,
+      "latent_to_geocentric_r2": 0.591610730387973,
+      "latent_to_geocentric_r2_per_angle": [
+        0.6165084192805674,
+        0.5668119819484876
+      ],
+      "latent_to_geocentric_rmse_radians": 1.1565455613683857,
+      "latent_to_heliocentric_r2": 0.4309448659654631,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.6165084192805674,
+        0.24647355736627408
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.3658780259067522,
+      "source_reservoir": 5
+    },
+    {
+      "geocentric_to_latent_r2": 0.6273939137107205,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.6166795298158609,
+        0.6386504296108538
+      ],
+      "heliocentric_to_latent_r2": 0.3473441233926864,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.319205818359246,
+        0.3769061851145634
+      ],
+      "latent_index": 6,
+      "latent_to_geocentric_r2": 0.7253096249288052,
+      "latent_to_geocentric_r2_per_angle": [
+        0.8345679526853502,
+        0.6164854767662304
+      ],
+      "latent_to_geocentric_rmse_radians": 0.9485217766942633,
+      "latent_to_heliocentric_r2": 0.5568700490983638,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.8345679526853502,
+        0.28080670177199496
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.205314268082658,
+      "source_reservoir": 6
+    },
+    {
+      "geocentric_to_latent_r2": 0.7084877717145373,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.5301832658478156,
+        0.783411366572503
+      ],
+      "heliocentric_to_latent_r2": 0.4726621938548128,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.3176673875232333,
+        0.5377910475437733
+      ],
+      "latent_index": 7,
+      "latent_to_geocentric_r2": 0.6021711226473848,
+      "latent_to_geocentric_r2_per_angle": [
+        0.5369403236778939,
+        0.6671427021835157
+      ],
+      "latent_to_geocentric_rmse_radians": 1.1414942733149154,
+      "latent_to_heliocentric_r2": 0.40070518633265506,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.5369403236778939,
+        0.26527194195739334
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.4016997790935795,
+      "source_reservoir": 7
+    },
+    {
+      "geocentric_to_latent_r2": 0.7972306019166583,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.8012806177603468,
+        0.4416676581885345
+      ],
+      "heliocentric_to_latent_r2": 0.5299492565072913,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.5309001635834061,
+        0.4464662944042722
+      ],
+      "latent_index": 8,
+      "latent_to_geocentric_r2": 0.5726475811009272,
+      "latent_to_geocentric_r2_per_angle": [
+        0.44537148851112596,
+        0.6994178936432258
+      ],
+      "latent_to_geocentric_rmse_radians": 1.1830924099532274,
+      "latent_to_heliocentric_r2": 0.3697155667831151,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.44537148851112596,
+        0.2945049630028306
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.4374840540085507,
+      "source_reservoir": 8
+    },
+    {
+      "geocentric_to_latent_r2": 0.8068987309498882,
+      "geocentric_to_latent_r2_per_dimension": [
+        0.8336867785490123,
+        0.7261841090522121
+      ],
+      "heliocentric_to_latent_r2": 0.528068850534686,
+      "heliocentric_to_latent_r2_per_dimension": [
+        0.5773518449447684,
+        0.3795750775161121
+      ],
+      "latent_index": 9,
+      "latent_to_geocentric_r2": 0.835954696241946,
+      "latent_to_geocentric_r2_per_angle": [
+        0.9313357638102355,
+        0.7409526616868791
+      ],
+      "latent_to_geocentric_rmse_radians": 0.7330059264039581,
+      "latent_to_heliocentric_r2": 0.6371874867642363,
+      "latent_to_heliocentric_r2_per_angle": [
+        0.9313357638102355,
+        0.34477059444093383
+      ],
+      "latent_to_heliocentric_rmse_radians": 1.0906260678800725,
+      "source_reservoir": 9
+    }
+  ]
+}

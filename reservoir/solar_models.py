@@ -11,6 +11,7 @@ from .models import make_projection, make_recurrent_matrix
 
 
 SOLAR_MODEL_NAMES = ("reservoir", "scinet")
+INTERMEDIATE_LATENT_SKIP_MODES = ("primary", "sequential")
 
 
 class SolarModelBase(nn.Module, ABC):
@@ -58,8 +59,8 @@ class SolarReservoir(SolarModelBase):
     week. Each later reservoir retains its own recurrent state across forecast
     weeks. Its trainable low-dimensional readout can either replace the
     preceding representation (the legacy behavior) or provide a bounded
-    residual around the primary physical latent. The final reservoir produces
-    features for the trainable readout.
+    residual around the primary or preceding physical latent. The final
+    reservoir produces features for the trainable readout.
     """
 
     uses_mars_dynamics_loss = True
@@ -83,6 +84,7 @@ class SolarReservoir(SolarModelBase):
         nonlinear: bool = True,
         preserve_primary_latent: bool = False,
         intermediate_latent_residual_scale: float = 0.1,
+        intermediate_latent_skip_mode: str = "primary",
     ) -> None:
         super().__init__()
         if nodes_1 < 1 or nodes_2 < 1 or latent_size < 1:
@@ -98,6 +100,11 @@ class SolarReservoir(SolarModelBase):
         if intermediate_latent_residual_scale < 0.0:
             raise ValueError(
                 "intermediate_latent_residual_scale must be nonnegative"
+            )
+        if intermediate_latent_skip_mode not in INTERMEDIATE_LATENT_SKIP_MODES:
+            raise ValueError(
+                "intermediate_latent_skip_mode must be one of "
+                f"{INTERMEDIATE_LATENT_SKIP_MODES}"
             )
         if not 0.0 < leak_rate <= 1.0:
             raise ValueError("leak_rate must be in (0, 1]")
@@ -115,6 +122,7 @@ class SolarReservoir(SolarModelBase):
         self.intermediate_latent_residual_scale = (
             intermediate_latent_residual_scale
         )
+        self.intermediate_latent_skip_mode = intermediate_latent_skip_mode
         generator = torch.Generator(device="cpu").manual_seed(seed)
         recurrent_names = []
         for layer, nodes in enumerate(self.reservoir_sizes, start=1):
@@ -147,6 +155,15 @@ class SolarReservoir(SolarModelBase):
             intermediate_biases.append(nn.Parameter(torch.zeros(latent_size)))
         self.intermediate_weights = nn.ParameterList(intermediate_weights)
         self.intermediate_biases = nn.ParameterList(intermediate_biases)
+        if (
+            preserve_primary_latent
+            and intermediate_latent_skip_mode == "sequential"
+        ):
+            self.intermediate_residual_gates = nn.Parameter(
+                torch.zeros(len(intermediate_weights))
+            )
+        else:
+            self.register_parameter("intermediate_residual_gates", None)
         self.W_out = nn.Parameter(torch.empty(2, nodes_2))
         self.c = nn.Parameter(torch.zeros(2))
         nn.init.xavier_uniform_(self.W, generator=generator)
@@ -171,6 +188,38 @@ class SolarReservoir(SolarModelBase):
             state = self._update(state, self.A1, drive)
         latent = state @ self.W.T + self.b
         return torch.tanh(latent) if self.nonlinear else latent
+
+    def intermediate_residual_alphas(self) -> torch.Tensor:
+        """Return the effective bounded gate for every intermediate readout."""
+
+        if self.intermediate_residual_gates is None:
+            return self.W.new_empty((0,))
+        return self.intermediate_latent_residual_scale * torch.tanh(
+            self.intermediate_residual_gates
+        )
+
+    def _intermediate_latent(
+        self,
+        state: torch.Tensor,
+        primary_latent: torch.Tensor,
+        previous_latent: torch.Tensor,
+        layer_index: int,
+    ) -> torch.Tensor:
+        intermediate = (
+            state @ self.intermediate_weights[layer_index].T
+            + self.intermediate_biases[layer_index]
+        )
+        if self.nonlinear or self.preserve_primary_latent:
+            intermediate = torch.tanh(intermediate)
+        if not self.preserve_primary_latent:
+            return intermediate
+        if self.intermediate_latent_skip_mode == "primary":
+            return (
+                primary_latent
+                + self.intermediate_latent_residual_scale * intermediate
+            )
+        alphas = self.intermediate_residual_alphas()
+        return previous_latent + alphas[layer_index] * intermediate
 
     def _run_reservoir_stack(
         self, initial_latent: torch.Tensor, horizon: int
@@ -203,17 +252,11 @@ class SolarReservoir(SolarModelBase):
                     state = self._update(state, recurrent, drive)
                 states[layer_index] = state
                 if layer_index < len(self.intermediate_weights):
-                    intermediate = (
-                        state @ self.intermediate_weights[layer_index].T
-                        + self.intermediate_biases[layer_index]
-                    )
-                    if self.nonlinear or self.preserve_primary_latent:
-                        intermediate = torch.tanh(intermediate)
-                    current = (
-                        primary_latent
-                        + self.intermediate_latent_residual_scale * intermediate
-                        if self.preserve_primary_latent
-                        else intermediate
+                    current = self._intermediate_latent(
+                        state,
+                        primary_latent,
+                        current,
+                        layer_index,
                     )
                     time_latents.append(current)
                 else:
@@ -387,6 +430,7 @@ def build_solar_model(
     seed: int,
     preserve_primary_latent: bool = False,
     intermediate_latent_residual_scale: float = 0.1,
+    intermediate_latent_skip_mode: str = "primary",
 ) -> SolarModelBase:
     if name == "reservoir":
         return SolarReservoir(
@@ -407,6 +451,7 @@ def build_solar_model(
             intermediate_latent_residual_scale=(
                 intermediate_latent_residual_scale
             ),
+            intermediate_latent_skip_mode=intermediate_latent_skip_mode,
         )
     if name == "scinet":
         return SolarSciNet(

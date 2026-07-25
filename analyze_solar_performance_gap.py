@@ -118,6 +118,9 @@ def _load_grid_model(
         intermediate_latent_residual_scale=config.get(
             "intermediate_latent_residual_scale", 0.1
         ),
+        intermediate_latent_skip_mode=config.get(
+            "intermediate_latent_skip_mode", "primary"
+        ),
     )
     if not isinstance(model, SolarReservoir):
         raise TypeError("selected checkpoint is not a SolarReservoir")
@@ -381,12 +384,12 @@ def _reservoir_features_from_latents(
                 state = model._update(state, recurrent, drive)
             states[layer_index] = state
             if layer_index < len(model.intermediate_weights):
-                current = (
-                    state @ model.intermediate_weights[layer_index].T
-                    + model.intermediate_biases[layer_index]
+                current = model._intermediate_latent(
+                    state,
+                    primary_latents[:, time_index],
+                    current,
+                    layer_index,
                 )
-                if model.nonlinear:
-                    current = torch.tanh(current)
         features.append(states[-1])
     return torch.stack(features, dim=1)
 
