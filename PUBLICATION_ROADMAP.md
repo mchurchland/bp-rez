@@ -38,7 +38,8 @@ model matches SciNet's prediction accuracy.
 
 ### 2. Strengthen the NARMA result
 
-- Run at least 20 paired seeds.
+- Run at least 10 paired seeds; use 20 or more for a confirmatory full-paper
+  analysis.
 - Add parameter-matched and compute-matched controls.
 - Tune every model with the same validation budget.
 - Sweep bottleneck sizes, reservoir sizes, and linear versus nonlinear
@@ -75,8 +76,8 @@ idealized.
 
 Proceed to a full paper when all of the following hold:
 
-1. The NARMA improvement survives parameter-matched controls and at least 20
-   paired seeds.
+1. The NARMA improvement survives parameter-matched controls and at least 10
+   paired seeds (preferably 20 or more for the full paper).
 2. Heliocentric alignment remains high across at least 10 seeds, not just one.
 3. The Mars trajectory captures its nonlinear changes in velocity on held-out
    examples.
@@ -111,7 +112,8 @@ computational-neuroscience, or machine-learning-for-science venue.
 
 1. Resolve the Mars trajectory shape and select the primary solar objective.
 2. Run the final 10-seed solar experiment.
-3. Run the 20-seed matched NARMA study.
+3. Run the default 10-seed matched NARMA study, then extend it to at least 20
+   pairs for confirmatory inference.
 4. Add one harder dynamical system.
 5. Generate publication figures and release a preprint with the complete code
    and per-seed results.

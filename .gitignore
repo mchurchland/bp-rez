@@ -3,7 +3,19 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
-/home/milesc/bp-rez/results/scinet-full-reproduction-101633/scinet/seed_0/history.json
 # Generated experiment outputs
 
 slurm-*.out
+narma/jobs/logs/*.out
+solar/jobs/logs/*.out
+!narma/jobs/logs/slurm-narma10-reservoir-95968.out
+!narma/jobs/logs/slurm-narma10-reservoir-95970.out
+!solar/jobs/logs/slurm-scinet-full-101633.out
+!solar/jobs/logs/slurm-solar-balanced-60k-101317.out
+!solar/jobs/logs/slurm-solar-latent-60k-98756.out
+!solar/jobs/logs/slurm-solar-latent-98717.out
+!solar/jobs/logs/slurm-solar-latent-98728.out
+narma/results/publication_benchmark/
+narma/results/screening_benchmark/
+narma/results/development/
+solar/results/solar_quick/
