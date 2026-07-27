@@ -1,0 +1,7 @@
+{
+  "expected_rows": 64,
+  "locked_config_hash": "917b7fdf6f8ed15ff9f2a8820a07ed6e716584622a879218c478b4daf240ef7e",
+  "missing_paths": [],
+  "missing_rows": 0,
+  "observed_rows": 64
+}

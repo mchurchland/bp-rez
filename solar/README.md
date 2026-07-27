@@ -202,6 +202,16 @@ The included Slurm script runs a one-GPU, time-budgeted grid search:
 sbatch solar/jobs/grid_search.sbatch
 ```
 
+Run the five-layer, 150-neuron sequential gated-residual model with:
+
+```bash
+sbatch solar/jobs/sequential_5x150.sbatch
+```
+
+This uses the same data and 15,000-update curriculum as the 10-layer experiment,
+with four explicit two-dimensional bottlenecks and three sequential residual
+gates.
+
 The search holds the two-layer, 150-neuron-per-layer architecture, data split,
 model seed, minibatch sampling, and 15,000-update curriculum constant. It
 contains 162 combinations of:

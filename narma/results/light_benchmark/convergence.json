@@ -1,0 +1,247 @@
+{
+  "accepted": true,
+  "criterion": "within every learned-model/order/regime group, the fraction of runs reaching max_epochs must not exceed 1",
+  "groups": [
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_linear",
+      "order": 5,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_nonlinear",
+      "order": 5,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "gru",
+      "order": 5,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_linear",
+      "order": 5,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_nonlinear",
+      "order": 5,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 0.0,
+      "epoch_cap_hits": 0,
+      "maximum_accepted_fraction": 1.0,
+      "model": "gru",
+      "order": 5,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_linear",
+      "order": 10,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_nonlinear",
+      "order": 10,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "gru",
+      "order": 10,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_linear",
+      "order": 10,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_nonlinear",
+      "order": 10,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 0.0,
+      "epoch_cap_hits": 0,
+      "maximum_accepted_fraction": 1.0,
+      "model": "gru",
+      "order": 10,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_linear",
+      "order": 20,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_nonlinear",
+      "order": 20,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "gru",
+      "order": 20,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_linear",
+      "order": 20,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_nonlinear",
+      "order": 20,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "gru",
+      "order": 20,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_linear",
+      "order": 30,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_nonlinear",
+      "order": 30,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "gru",
+      "order": 30,
+      "regime": "small",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_linear",
+      "order": 30,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 1.0,
+      "epoch_cap_hits": 1,
+      "maximum_accepted_fraction": 1.0,
+      "model": "learned_nonlinear",
+      "order": 30,
+      "regime": "long",
+      "runs": 1
+    },
+    {
+      "accepted": true,
+      "epoch_cap_fraction": 0.0,
+      "epoch_cap_hits": 0,
+      "maximum_accepted_fraction": 1.0,
+      "model": "gru",
+      "order": 30,
+      "regime": "long",
+      "runs": 1
+    }
+  ],
+  "violations": []
+}

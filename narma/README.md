@@ -211,6 +211,19 @@ Tuning resumes at completed-trial granularity and final workers resume at
 completed-model granularity. Every resumable shard is checked against the
 suite and source hashes before reuse.
 
+### Analyze pulled results
+
+Aggregate a completed result directory directly from its locked manifest:
+
+```bash
+python -m narma.analysis.aggregate_locked narma/results/light_benchmark
+```
+
+This is preferable to rebuilding the original command-line arguments after
+moving results between machines. It preserves the exact locked floating-point
+settings even when Python or NumPy versions serialize equivalent values
+differently.
+
 ## Local smoke test
 
 The automated test runs all eight models through a tiny tune-lock-final-
