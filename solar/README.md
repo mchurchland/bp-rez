@@ -212,6 +212,31 @@ This uses the same data and 15,000-update curriculum as the 10-layer experiment,
 with four explicit two-dimensional bottlenecks and three sequential residual
 gates.
 
+Run the controlled two-reservoir size sweep with:
+
+```bash
+sbatch solar/jobs/reservoir_size_sweep.sbatch
+```
+
+This holds the complete 15,000-update training protocol and all dynamical
+hyperparameters equal to the five-layer run, but uses exactly two reservoirs
+and therefore one explicit two-dimensional latent bottleneck. Both reservoirs
+have the same width. The default sizes are 10, 20, 30, 50, 75, 100, 150, 200,
+250, and 300 neurons, each evaluated with model seeds 0, 1, and 2 on the same
+data split. A smaller exploratory sweep can be submitted with:
+
+```bash
+sbatch --export=ALL,RESERVOIR_SIZES="10 50 150 300",MODEL_SEEDS="0" \
+  solar/jobs/reservoir_size_sweep.sbatch
+```
+
+The sweep is resumable when `SIZE_SWEEP_OUTPUT_DIR` points to the original
+output directory. Completed sizes are skipped. `size_sweep.csv` contains every
+size/seed result, `size_sweep_summary.csv` contains means and standard
+deviations, `best_validation_size.json` selects using validation error only,
+and `size_sweep.png` compares forecast error, latent alignment, heliocentric
+advantage, and training time.
+
 The search holds the two-layer, 150-neuron-per-layer architecture, data split,
 model seed, minibatch sampling, and 15,000-update curriculum constant. It
 contains 162 combinations of:

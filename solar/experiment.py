@@ -1022,6 +1022,21 @@ def _save_latent_depth_plot(diagnostics: list[dict[str, Any]], path: Path) -> No
             "latent_to_geocentric_r2",
         ),
     )
+    plotted_values = np.asarray(
+        [
+            row[key]
+            for row in diagnostics
+            for _, forward_key, reverse_key in relationships
+            for key in (forward_key, reverse_key)
+        ],
+        dtype=np.float64,
+    )
+    value_span = float(np.ptp(plotted_values))
+    y_padding = max(0.005, 0.12 * value_span)
+    y_limits = (
+        float(plotted_values.min()) - y_padding,
+        min(1.005, float(plotted_values.max()) + y_padding),
+    )
     for axis, (title, forward_key, reverse_key) in zip(
         axes, relationships, strict=True
     ):
@@ -1043,7 +1058,7 @@ def _save_latent_depth_plot(diagnostics: list[dict[str, Any]], path: Path) -> No
             title=title,
             xlabel="2D latent after reservoir",
             xticks=layers,
-            ylim=(-0.05, 1.02),
+            ylim=y_limits,
         )
         axis.grid(alpha=0.25)
         axis.legend(frameon=False)
