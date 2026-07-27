@@ -36,12 +36,19 @@ Submit the reduced screening workflow with:
 bash narma/jobs/submit_publication_benchmark.sh
 ```
 
+Run the roughly one-hour, 20-GPU light profile with:
+
+```bash
+bash narma/jobs/submit_light_benchmark.sh
+```
+
 The default screening profile covers NARMA-5/10/20/30, small and long training
 conditions, all eight required baselines, two tuning seeds and three paired
-final replicates. Run the larger confirmatory design with
-`NARMA_PROFILE=publication`. See the [NARMA protocol](narma/README.md) before
-interpreting cross-order scores: different orders have incompatible definitions
-in the literature and are recorded explicitly here.
+final replicates. Use `NARMA_PROFILE=light` for a roughly one-hour, 20-GPU
+pipeline check or `NARMA_PROFILE=publication` for the larger confirmatory
+design. See the [NARMA protocol](narma/README.md) before interpreting
+cross-order scores: different orders have incompatible definitions in the
+literature and are recorded explicitly here.
 
 ## Solar experiments
 

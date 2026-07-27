@@ -30,6 +30,16 @@ export MKL_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 
 NARMA_PROFILE="${NARMA_PROFILE:-screening}"
 case "$NARMA_PROFILE" in
+    light)
+        PROFILE_OUTPUT_ROOT="narma/results/light_benchmark"
+        PROFILE_SEARCH_TRIALS=2
+        PROFILE_MAX_EPOCHS=150
+        PROFILE_MAX_EPOCH_CAP_FRACTION=1
+        PROFILE_FINAL_PAIR_IDS="0"
+        PROFILE_TUNING_PAIR_IDS="10000"
+        PROFILE_EARLY_STOPPING_PATIENCE=25
+        PROFILE_SCHEDULER_PATIENCE=8
+        ;;
     screening)
         PROFILE_OUTPUT_ROOT="narma/results/screening_benchmark"
         PROFILE_SEARCH_TRIALS=4
@@ -37,6 +47,8 @@ case "$NARMA_PROFILE" in
         PROFILE_MAX_EPOCH_CAP_FRACTION=1
         PROFILE_FINAL_PAIR_IDS="0 1 2"
         PROFILE_TUNING_PAIR_IDS="10000 10001"
+        PROFILE_EARLY_STOPPING_PATIENCE=100
+        PROFILE_SCHEDULER_PATIENCE=20
         ;;
     publication)
         PROFILE_OUTPUT_ROOT="narma/results/publication_benchmark"
@@ -45,9 +57,11 @@ case "$NARMA_PROFILE" in
         PROFILE_MAX_EPOCH_CAP_FRACTION=0.1
         PROFILE_FINAL_PAIR_IDS="0 1 2 3 4 5 6 7 8 9"
         PROFILE_TUNING_PAIR_IDS="10000 10001 10002"
+        PROFILE_EARLY_STOPPING_PATIENCE=100
+        PROFILE_SCHEDULER_PATIENCE=20
         ;;
     *)
-        echo "NARMA_PROFILE must be screening or publication." >&2
+        echo "NARMA_PROFILE must be light, screening or publication." >&2
         exit 1
         ;;
 esac
@@ -58,6 +72,8 @@ NARMA_MAX_EPOCHS="${NARMA_MAX_EPOCHS:-$PROFILE_MAX_EPOCHS}"
 NARMA_MAX_EPOCH_CAP_FRACTION="${NARMA_MAX_EPOCH_CAP_FRACTION:-$PROFILE_MAX_EPOCH_CAP_FRACTION}"
 NARMA_FINAL_PAIR_IDS="${NARMA_FINAL_PAIR_IDS:-$PROFILE_FINAL_PAIR_IDS}"
 NARMA_TUNING_PAIR_IDS="${NARMA_TUNING_PAIR_IDS:-$PROFILE_TUNING_PAIR_IDS}"
+NARMA_EARLY_STOPPING_PATIENCE="${NARMA_EARLY_STOPPING_PATIENCE:-$PROFILE_EARLY_STOPPING_PATIENCE}"
+NARMA_SCHEDULER_PATIENCE="${NARMA_SCHEDULER_PATIENCE:-$PROFILE_SCHEDULER_PATIENCE}"
 read -r -a NARMA_FINAL_PAIR_ID_ARGS <<< "$NARMA_FINAL_PAIR_IDS"
 read -r -a NARMA_TUNING_PAIR_ID_ARGS <<< "$NARMA_TUNING_PAIR_IDS"
 
@@ -84,8 +100,8 @@ NARMA_COMMON_ARGS=(
     --search-trials "$NARMA_SEARCH_TRIALS"
     --max-epochs "$NARMA_MAX_EPOCHS"
     --max-epoch-cap-fraction "$NARMA_MAX_EPOCH_CAP_FRACTION"
-    --early-stopping-patience 100
-    --scheduler-patience 20
+    --early-stopping-patience "$NARMA_EARLY_STOPPING_PATIENCE"
+    --scheduler-patience "$NARMA_SCHEDULER_PATIENCE"
     --scheduler-factor 0.5
     --minimum-learning-rate 1e-6
     --gradient-clip 1.0

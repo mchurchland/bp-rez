@@ -120,6 +120,23 @@ threshold change).
 
 ## Submit the Slurm workflow
 
+For a roughly one-hour run on 20 GPUs, use the light profile:
+
+```bash
+bash narma/jobs/submit_light_benchmark.sh
+```
+
+It retains all four NARMA tasks, both data regimes, all eight models and the
+standard sequence lengths, while using one tuning seed, two trials, one paired
+final seed, a 150-epoch ceiling, early-stopping patience 25 and up to 20
+concurrent workers. The final stage therefore has eight tasks. Compute workers
+request a one-hour Slurm limit, and results go under
+`narma/results/light_benchmark/`.
+
+This is a pipeline and coarse-ranking check, not a statistical experiment.
+Runtime is expected to be approximately 30–60 minutes once resources are
+allocated; cluster queue time and hardware variation can make it longer.
+
 From the repository root, the bare launcher now runs the screening profile:
 
 ```bash
