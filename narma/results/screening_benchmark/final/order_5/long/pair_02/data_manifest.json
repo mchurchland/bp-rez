@@ -1,0 +1,66 @@
+{
+  "acceptance_policy": "first deterministic iid-uniform proposal whose generated target is finite and |y[t]| <= 1e6 over the recorded acceptance horizon",
+  "alignment": "u[t] is consumed before predicting y[t+1]",
+  "benchmark_variant_name": "narma5_fujii_nakajima_stable_trajectory_conditional",
+  "generation_dtype": "float64",
+  "input_proposal_rng": "NumPy Generator(PCG64)",
+  "order": 5,
+  "pair_id": 2,
+  "regime": "long",
+  "splits": {
+    "test": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 0,
+      "length": 10000,
+      "proposal_input_distribution": "iid Uniform(0, 0.2) from NumPy PCG64",
+      "realized_seed": 1309352122,
+      "rejected_seeds": [],
+      "requested_seed": 1309352122,
+      "sha256_u_and_y": "65ef725e42afd4d5ad4147bf7a2d09ef33812bfc75764c065aa842cc0748774e",
+      "stream": "final_test"
+    },
+    "train": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 0,
+      "length": 10000,
+      "proposal_input_distribution": "iid Uniform(0, 0.2) from NumPy PCG64",
+      "realized_seed": 3733093524,
+      "rejected_seeds": [],
+      "requested_seed": 3733093524,
+      "sha256_u_and_y": "7865379fda6e258131bcc990486bdb3d442dfd7526f4cf1fccd2148dafa4abee",
+      "stream": "train"
+    },
+    "validation": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 0,
+      "length": 2000,
+      "proposal_input_distribution": "iid Uniform(0, 0.2) from NumPy PCG64",
+      "realized_seed": 4070895744,
+      "rejected_seeds": [],
+      "requested_seed": 4070895744,
+      "sha256_u_and_y": "6e92ebc170ca8e0363e99e3fe9de843b4dc8771d0fe99740d564211bfc4ababc",
+      "stream": "validation"
+    }
+  },
+  "state_initialization": "all recurrent and NARMA target states reset to zero",
+  "storage_dtype": "float32",
+  "task": {
+    "alpha": 0.3,
+    "benchmark_variant_name": "narma5_fujii_nakajima_stable_trajectory_conditional",
+    "beta": 0.05,
+    "citation": "Fujii and Nakajima (2017), Eq. 18 and Appendix A.2",
+    "citation_url": "https://doi.org/10.1103/PhysRevApplied.8.024030",
+    "delta": 0.1,
+    "equation": "y[t+1] = 0.3 y[t] + 0.05 y[t] sum(y[t-i], i=0..4) + 1.5 u[t-4] u[t] + 0.1",
+    "gamma": 1.5,
+    "input_high": 0.2,
+    "input_low": 0.0,
+    "name": "narma5_fujii_nakajima",
+    "order": 5,
+    "outer_activation": "identity"
+  },
+  "washout": 200
+}

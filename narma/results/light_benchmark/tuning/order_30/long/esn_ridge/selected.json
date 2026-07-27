@@ -1,0 +1,61 @@
+{
+  "benchmark_variant_name": "narma30_schrauwen_stable_trajectory_conditional",
+  "epoch_cap_fraction": 0.0,
+  "epoch_cap_hits": 0,
+  "mean_validation_nrmse": 0.6391632278582484,
+  "model": "esn_ridge",
+  "optimizer": {
+    "early_stopping_patience": 25,
+    "gradient_clip": 1.0,
+    "learning_rate": 0.001,
+    "max_epochs": 150,
+    "min_delta": 1e-08,
+    "minimum_learning_rate": 1e-06,
+    "scheduler_factor": 0.5,
+    "scheduler_patience": 8,
+    "weight_decay": 0.0
+  },
+  "order": 30,
+  "regime": "long",
+  "reservoir": {
+    "bias_scale_1": 0.3,
+    "bias_scale_2": 0.0,
+    "density_1": 0.2,
+    "density_2": 0.1,
+    "gru_hidden_size": 22,
+    "input_scale": 0.3,
+    "interlayer_scale": 1.0,
+    "latent_size": 10,
+    "leak_rate_1": 0.3,
+    "leak_rate_2": 1.0,
+    "nodes_1": 150,
+    "nodes_2": 150,
+    "spectral_radius_1": 0.9,
+    "spectral_radius_2": 0.9
+  },
+  "search_trials": 2,
+  "selected_trial": 1,
+  "selection_hash": "925395644853c5c015dca03219a662945b7772237837e2fb3f775d266525e34f",
+  "source_hash": "16a08f3175591beaaefaa035ef0c5826ee91bbd2595aa2ca374df0678e0e4fb2",
+  "suite_protocol_hash": "14b87990889c7e3d9be3e2b8173bb77a97c632dd822170f01f2dccf00b05b100",
+  "task": {
+    "alpha": 0.2,
+    "benchmark_variant_name": "narma30_schrauwen_stable_trajectory_conditional",
+    "beta": 0.04,
+    "citation": "Schrauwen et al. (2008), p. 1164",
+    "citation_url": "https://doi.org/10.1016/j.neucom.2007.12.020",
+    "delta": 0.001,
+    "equation": "y[t+1] = 0.2 y[t] + 0.04 y[t] sum(y[t-i], i=0..29) + 1.5 u[t-29] u[t] + 0.001",
+    "gamma": 1.5,
+    "input_high": 0.5,
+    "input_low": 0.0,
+    "name": "narma30_schrauwen",
+    "order": 30,
+    "outer_activation": "identity"
+  },
+  "test_data_constructed": false,
+  "tuning_pair_ids": [
+    10000
+  ],
+  "tuning_runs": 1
+}

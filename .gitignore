@@ -15,8 +15,8 @@ solar/jobs/logs/*.out
 !solar/jobs/logs/slurm-solar-latent-60k-98756.out
 !solar/jobs/logs/slurm-solar-latent-98717.out
 !solar/jobs/logs/slurm-solar-latent-98728.out
-narma/results/publication_benchmark/
-narma/results/screening_benchmark/
-narma/results/light_benchmark/
-narma/results/development/
+#narma/results/publication_benchmark/
+#narma/results/screening_benchmark/
+#narma/results/light_benchmark/
+#narma/results/development/
 solar/results/solar_quick/

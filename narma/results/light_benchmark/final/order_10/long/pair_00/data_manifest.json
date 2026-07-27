@@ -1,0 +1,68 @@
+{
+  "acceptance_policy": "first deterministic iid-uniform proposal whose generated target is finite and |y[t]| <= 1e6 over the recorded acceptance horizon",
+  "alignment": "u[t] is consumed before predicting y[t+1]",
+  "benchmark_variant_name": "narma10_atiya_parlos_stable_trajectory_conditional",
+  "generation_dtype": "float64",
+  "input_proposal_rng": "NumPy Generator(PCG64)",
+  "order": 10,
+  "pair_id": 0,
+  "regime": "long",
+  "splits": {
+    "test": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 0,
+      "length": 10000,
+      "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+      "realized_seed": 2497512899,
+      "rejected_seeds": [],
+      "requested_seed": 2497512899,
+      "sha256_u_and_y": "46a658f9a20db9dcf7119caf2fad21a0f630027eea90827e2953978ac6b81d02",
+      "stream": "final_test"
+    },
+    "train": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 1,
+      "length": 10000,
+      "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+      "realized_seed": 3320359296,
+      "rejected_seeds": [
+        1567501864
+      ],
+      "requested_seed": 1567501864,
+      "sha256_u_and_y": "c9d100c3f746d0768af4891fbfc6493d7dfcad79eee3ce9ead3857758aa49250",
+      "stream": "train"
+    },
+    "validation": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 0,
+      "length": 2000,
+      "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+      "realized_seed": 585936289,
+      "rejected_seeds": [],
+      "requested_seed": 585936289,
+      "sha256_u_and_y": "f883e0178d4efe5a4a71f1934e02c62613e28582386a3129cf3dcc2d17295fc0",
+      "stream": "validation"
+    }
+  },
+  "state_initialization": "all recurrent and NARMA target states reset to zero",
+  "storage_dtype": "float32",
+  "task": {
+    "alpha": 0.3,
+    "benchmark_variant_name": "narma10_atiya_parlos_stable_trajectory_conditional",
+    "beta": 0.05,
+    "citation": "Atiya and Parlos (2000), Eq. 86",
+    "citation_url": "https://doi.org/10.1109/72.846741",
+    "delta": 0.1,
+    "equation": "y[t+1] = 0.3 y[t] + 0.05 y[t] sum(y[t-i], i=0..9) + 1.5 u[t-9] u[t] + 0.1",
+    "gamma": 1.5,
+    "input_high": 0.5,
+    "input_low": 0.0,
+    "name": "narma10_atiya_parlos",
+    "order": 10,
+    "outer_activation": "identity"
+  },
+  "washout": 200
+}

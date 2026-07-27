@@ -1,0 +1,8 @@
+{
+  "gradient_norm_after_clip": [],
+  "gradient_norm_before_clip": [],
+  "gradient_was_clipped": [],
+  "learning_rate": [],
+  "train_mse": [],
+  "validation_mse": []
+}

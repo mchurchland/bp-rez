@@ -1,0 +1,67 @@
+{
+  "candidates": [
+    {
+      "optimizer": {
+        "early_stopping_patience": 25,
+        "gradient_clip": 1.0,
+        "learning_rate": 0.001,
+        "max_epochs": 150,
+        "min_delta": 1e-08,
+        "minimum_learning_rate": 1e-06,
+        "scheduler_factor": 0.5,
+        "scheduler_patience": 8,
+        "weight_decay": 0.0
+      },
+      "reservoir": {
+        "bias_scale_1": 0.0,
+        "bias_scale_2": 0.0,
+        "density_1": 0.1,
+        "density_2": 0.1,
+        "gru_hidden_size": 22,
+        "input_scale": 0.5,
+        "interlayer_scale": 1.0,
+        "latent_size": 10,
+        "leak_rate_1": 1.0,
+        "leak_rate_2": 1.0,
+        "nodes_1": 150,
+        "nodes_2": 150,
+        "spectral_radius_1": 0.9,
+        "spectral_radius_2": 0.9
+      }
+    },
+    {
+      "optimizer": {
+        "early_stopping_patience": 25,
+        "gradient_clip": 1.0,
+        "learning_rate": 0.001,
+        "max_epochs": 150,
+        "min_delta": 1e-08,
+        "minimum_learning_rate": 1e-06,
+        "scheduler_factor": 0.5,
+        "scheduler_patience": 8,
+        "weight_decay": 0.0
+      },
+      "reservoir": {
+        "bias_scale_1": 0.3,
+        "bias_scale_2": 0.3,
+        "density_1": 0.1,
+        "density_2": 0.2,
+        "gru_hidden_size": 22,
+        "input_scale": 0.1,
+        "interlayer_scale": 0.5,
+        "latent_size": 10,
+        "leak_rate_1": 1.0,
+        "leak_rate_2": 1.0,
+        "nodes_1": 150,
+        "nodes_2": 150,
+        "spectral_radius_1": 1.1,
+        "spectral_radius_2": 0.5
+      }
+    }
+  ],
+  "model": "random_bottleneck",
+  "order": 10,
+  "regime": "long",
+  "source_hash": "16a08f3175591beaaefaa035ef0c5826ee91bbd2595aa2ca374df0678e0e4fb2",
+  "suite_protocol_hash": "14b87990889c7e3d9be3e2b8173bb77a97c632dd822170f01f2dccf00b05b100"
+}

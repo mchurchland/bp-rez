@@ -1,0 +1,14 @@
+{
+  "locked_config_hash": "a17738ea954c8da3fd5628f52cb87746a4198e48eb7bcffa1e0002e7b6fffdc5",
+  "models": [
+    "esn_ridge",
+    "large_esn_ridge",
+    "deep_esn_ridge",
+    "random_bottleneck",
+    "pca_bottleneck",
+    "learned_linear",
+    "learned_nonlinear",
+    "gru"
+  ],
+  "test_sha256": "674c339cdf58dd08afdb571639a48ae715018d2c94afba7b910f4b3ee5967cf6"
+}

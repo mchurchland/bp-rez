@@ -1,0 +1,66 @@
+{
+  "acceptance_policy": "first deterministic iid-uniform proposal whose generated target is finite and |y[t]| <= 1e6 over the recorded acceptance horizon",
+  "alignment": "u[t] is consumed before predicting y[t+1]",
+  "benchmark_variant_name": "narma20_rodan_tino_stable_trajectory_conditional",
+  "generation_dtype": "float64",
+  "input_proposal_rng": "NumPy Generator(PCG64)",
+  "order": 20,
+  "pair_id": 1,
+  "regime": "long",
+  "splits": {
+    "test": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 0,
+      "length": 10000,
+      "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+      "realized_seed": 133799872,
+      "rejected_seeds": [],
+      "requested_seed": 133799872,
+      "sha256_u_and_y": "8ba0d853d571943d276fc89a21baa75e5c0dc746ecc75501c0ddd4b18e90d2a3",
+      "stream": "final_test"
+    },
+    "train": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 0,
+      "length": 10000,
+      "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+      "realized_seed": 1301064512,
+      "rejected_seeds": [],
+      "requested_seed": 1301064512,
+      "sha256_u_and_y": "362c972b20f50eea295bd9290fbe9587a2810e08ab02be7c143821251f67d4ec",
+      "stream": "train"
+    },
+    "validation": {
+      "acceptance_horizon": 10000,
+      "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+      "generation_attempt": 0,
+      "length": 2000,
+      "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+      "realized_seed": 2082989034,
+      "rejected_seeds": [],
+      "requested_seed": 2082989034,
+      "sha256_u_and_y": "83a6f58c27c965f8c114c0f63f6d6c81578e5881580b779e10ddf3a384400c0b",
+      "stream": "validation"
+    }
+  },
+  "state_initialization": "all recurrent and NARMA target states reset to zero",
+  "storage_dtype": "float32",
+  "task": {
+    "alpha": 0.3,
+    "benchmark_variant_name": "narma20_rodan_tino_stable_trajectory_conditional",
+    "beta": 0.05,
+    "citation": "Rodan and Tino (2011), Eq. 6",
+    "citation_url": "https://doi.org/10.1109/TNN.2010.2089641",
+    "delta": 0.01,
+    "equation": "y[t+1] = tanh(0.3 y[t] + 0.05 y[t] sum(y[t-i], i=0..19) + 1.5 u[t-19] u[t] + 0.01)",
+    "gamma": 1.5,
+    "input_high": 0.5,
+    "input_low": 0.0,
+    "name": "narma20_rodan_tino",
+    "order": 20,
+    "outer_activation": "tanh"
+  },
+  "washout": 200
+}

@@ -1,0 +1,458 @@
+[
+  {
+    "mean_validation_nrmse": 0.29556162342779063,
+    "optimizer": {
+      "early_stopping_patience": 100,
+      "gradient_clip": 1.0,
+      "learning_rate": 0.001,
+      "max_epochs": 600,
+      "min_delta": 1e-08,
+      "minimum_learning_rate": 1e-06,
+      "scheduler_factor": 0.5,
+      "scheduler_patience": 20,
+      "weight_decay": 0.0
+    },
+    "pairs": [
+      {
+        "best_epoch": 592,
+        "best_validation_mse_joint_head": 0.001458666636608541,
+        "epochs_ran": 600,
+        "gradient_training_seconds": 4995.126916160982,
+        "hit_epoch_cap": true,
+        "model_seed": 4026729767,
+        "preprocessor_fit_seconds": 2.033563717996003,
+        "ridge_fit_seconds": 5.6600980020011775,
+        "selected_ridge_alpha": 0.0001,
+        "train_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 1,
+          "length": 10000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 1829620129,
+          "rejected_seeds": [
+            854362778
+          ],
+          "requested_seed": 854362778,
+          "sha256_u_and_y": "604d8e911b65205cc47c7d590ba0c04d96a47f6340edd2d6e864ea9395aca304",
+          "stream": "development_train"
+        },
+        "training_seconds": 4997.160479878978,
+        "tuning_pair_id": 10000,
+        "validation_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 2000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 1741581694,
+          "rejected_seeds": [],
+          "requested_seed": 1741581694,
+          "sha256_u_and_y": "d45709d2c68cad24b66aea6a6b1d9a8bee01532b8ecd9d2c219bc09dedcd46f1",
+          "stream": "development_validation"
+        },
+        "validation_mse": 0.0010214342824686547,
+        "validation_nrmse": 0.2997206937784592
+      },
+      {
+        "best_epoch": 600,
+        "best_validation_mse_joint_head": 0.0014142794534564018,
+        "epochs_ran": 600,
+        "gradient_training_seconds": 4976.177879544994,
+        "hit_epoch_cap": true,
+        "model_seed": 1248173505,
+        "preprocessor_fit_seconds": 1.8455260439950507,
+        "ridge_fit_seconds": 5.602437647001352,
+        "selected_ridge_alpha": 1e-12,
+        "train_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 10000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 2029625984,
+          "rejected_seeds": [],
+          "requested_seed": 2029625984,
+          "sha256_u_and_y": "75d8765b8d60e0bfb3618a3f6800502919aab1fe346b5c353fd71cb214663c77",
+          "stream": "development_train"
+        },
+        "training_seconds": 4978.023405588989,
+        "tuning_pair_id": 10001,
+        "validation_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 2000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 4273505966,
+          "rejected_seeds": [],
+          "requested_seed": 4273505966,
+          "sha256_u_and_y": "ef4eaf269fa56982dada9d0773251c46306ebea9274782026c63c53bd4843e03",
+          "stream": "development_validation"
+        },
+        "validation_mse": 0.0010120605961557152,
+        "validation_nrmse": 0.29140255307712204
+      }
+    ],
+    "reservoir": {
+      "bias_scale_1": 0.0,
+      "bias_scale_2": 0.0,
+      "density_1": 0.1,
+      "density_2": 0.1,
+      "gru_hidden_size": 22,
+      "input_scale": 0.5,
+      "interlayer_scale": 1.0,
+      "latent_size": 10,
+      "leak_rate_1": 1.0,
+      "leak_rate_2": 1.0,
+      "nodes_1": 150,
+      "nodes_2": 150,
+      "spectral_radius_1": 0.9,
+      "spectral_radius_2": 0.9
+    },
+    "sd_validation_nrmse": 0.005881813696779347,
+    "trial": 0
+  },
+  {
+    "mean_validation_nrmse": 0.783449876531265,
+    "optimizer": {
+      "early_stopping_patience": 100,
+      "gradient_clip": 1.0,
+      "learning_rate": 0.003,
+      "max_epochs": 600,
+      "min_delta": 1e-08,
+      "minimum_learning_rate": 1e-06,
+      "scheduler_factor": 0.5,
+      "scheduler_patience": 20,
+      "weight_decay": 0.0001
+    },
+    "pairs": [
+      {
+        "best_epoch": 600,
+        "best_validation_mse_joint_head": 0.008106597699224949,
+        "epochs_ran": 600,
+        "gradient_training_seconds": 4976.806249527988,
+        "hit_epoch_cap": true,
+        "model_seed": 4026729767,
+        "preprocessor_fit_seconds": 1.8468795859953389,
+        "ridge_fit_seconds": 5.53626974899089,
+        "selected_ridge_alpha": 0.0001,
+        "train_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 1,
+          "length": 10000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 1829620129,
+          "rejected_seeds": [
+            854362778
+          ],
+          "requested_seed": 854362778,
+          "sha256_u_and_y": "604d8e911b65205cc47c7d590ba0c04d96a47f6340edd2d6e864ea9395aca304",
+          "stream": "development_train"
+        },
+        "training_seconds": 4978.653129113984,
+        "tuning_pair_id": 10000,
+        "validation_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 2000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 1741581694,
+          "rejected_seeds": [],
+          "requested_seed": 1741581694,
+          "sha256_u_and_y": "d45709d2c68cad24b66aea6a6b1d9a8bee01532b8ecd9d2c219bc09dedcd46f1",
+          "stream": "development_validation"
+        },
+        "validation_mse": 0.007552234571121821,
+        "validation_nrmse": 0.8149843131565899
+      },
+      {
+        "best_epoch": 600,
+        "best_validation_mse_joint_head": 0.007446717470884323,
+        "epochs_ran": 600,
+        "gradient_training_seconds": 4978.430424227001,
+        "hit_epoch_cap": true,
+        "model_seed": 1248173505,
+        "preprocessor_fit_seconds": 1.8414501200022642,
+        "ridge_fit_seconds": 5.551050549984211,
+        "selected_ridge_alpha": 0.001,
+        "train_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 10000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 2029625984,
+          "rejected_seeds": [],
+          "requested_seed": 2029625984,
+          "sha256_u_and_y": "75d8765b8d60e0bfb3618a3f6800502919aab1fe346b5c353fd71cb214663c77",
+          "stream": "development_train"
+        },
+        "training_seconds": 4980.271874347003,
+        "tuning_pair_id": 10001,
+        "validation_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 2000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 4273505966,
+          "rejected_seeds": [],
+          "requested_seed": 4273505966,
+          "sha256_u_and_y": "ef4eaf269fa56982dada9d0773251c46306ebea9274782026c63c53bd4843e03",
+          "stream": "development_validation"
+        },
+        "validation_mse": 0.006738415968573109,
+        "validation_nrmse": 0.75191543990594
+      }
+    ],
+    "reservoir": {
+      "bias_scale_1": 0.0,
+      "bias_scale_2": 0.0,
+      "density_1": 0.1,
+      "density_2": 0.2,
+      "gru_hidden_size": 22,
+      "input_scale": 0.3,
+      "interlayer_scale": 2.0,
+      "latent_size": 10,
+      "leak_rate_1": 0.1,
+      "leak_rate_2": 0.1,
+      "nodes_1": 150,
+      "nodes_2": 150,
+      "spectral_radius_1": 0.9,
+      "spectral_radius_2": 1.1
+    },
+    "sd_validation_nrmse": 0.04459642795732941,
+    "trial": 1
+  },
+  {
+    "mean_validation_nrmse": 0.17723700602773898,
+    "optimizer": {
+      "early_stopping_patience": 100,
+      "gradient_clip": 1.0,
+      "learning_rate": 0.003,
+      "max_epochs": 600,
+      "min_delta": 1e-08,
+      "minimum_learning_rate": 1e-06,
+      "scheduler_factor": 0.5,
+      "scheduler_patience": 20,
+      "weight_decay": 0.0
+    },
+    "pairs": [
+      {
+        "best_epoch": 600,
+        "best_validation_mse_joint_head": 0.0007027517422102392,
+        "epochs_ran": 600,
+        "gradient_training_seconds": 4977.4961711080105,
+        "hit_epoch_cap": true,
+        "model_seed": 4026729767,
+        "preprocessor_fit_seconds": 1.846158887987258,
+        "ridge_fit_seconds": 5.630870374006918,
+        "selected_ridge_alpha": 1e-06,
+        "train_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 1,
+          "length": 10000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 1829620129,
+          "rejected_seeds": [
+            854362778
+          ],
+          "requested_seed": 854362778,
+          "sha256_u_and_y": "604d8e911b65205cc47c7d590ba0c04d96a47f6340edd2d6e864ea9395aca304",
+          "stream": "development_train"
+        },
+        "training_seconds": 4979.342329995998,
+        "tuning_pair_id": 10000,
+        "validation_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 2000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 1741581694,
+          "rejected_seeds": [],
+          "requested_seed": 1741581694,
+          "sha256_u_and_y": "d45709d2c68cad24b66aea6a6b1d9a8bee01532b8ecd9d2c219bc09dedcd46f1",
+          "stream": "development_validation"
+        },
+        "validation_mse": 0.0003472165439231444,
+        "validation_nrmse": 0.1747478009269561
+      },
+      {
+        "best_epoch": 600,
+        "best_validation_mse_joint_head": 0.0006593454163521528,
+        "epochs_ran": 600,
+        "gradient_training_seconds": 4978.473576398013,
+        "hit_epoch_cap": true,
+        "model_seed": 1248173505,
+        "preprocessor_fit_seconds": 1.8459260749805253,
+        "ridge_fit_seconds": 5.571507911023218,
+        "selected_ridge_alpha": 1e-12,
+        "train_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 10000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 2029625984,
+          "rejected_seeds": [],
+          "requested_seed": 2029625984,
+          "sha256_u_and_y": "75d8765b8d60e0bfb3618a3f6800502919aab1fe346b5c353fd71cb214663c77",
+          "stream": "development_train"
+        },
+        "training_seconds": 4980.319502472994,
+        "tuning_pair_id": 10001,
+        "validation_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 2000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 4273505966,
+          "rejected_seeds": [],
+          "requested_seed": 4273505966,
+          "sha256_u_and_y": "ef4eaf269fa56982dada9d0773251c46306ebea9274782026c63c53bd4843e03",
+          "stream": "development_validation"
+        },
+        "validation_mse": 0.00038498397215960974,
+        "validation_nrmse": 0.17972621112852186
+      }
+    ],
+    "reservoir": {
+      "bias_scale_1": 0.0,
+      "bias_scale_2": 0.1,
+      "density_1": 0.2,
+      "density_2": 0.2,
+      "gru_hidden_size": 22,
+      "input_scale": 0.5,
+      "interlayer_scale": 0.5,
+      "latent_size": 10,
+      "leak_rate_1": 1.0,
+      "leak_rate_2": 0.3,
+      "nodes_1": 150,
+      "nodes_2": 150,
+      "spectral_radius_1": 0.99,
+      "spectral_radius_2": 0.7
+    },
+    "sd_validation_nrmse": 0.0035202676130554307,
+    "trial": 2
+  },
+  {
+    "mean_validation_nrmse": 0.8432629895237558,
+    "optimizer": {
+      "early_stopping_patience": 100,
+      "gradient_clip": 1.0,
+      "learning_rate": 0.0001,
+      "max_epochs": 600,
+      "min_delta": 1e-08,
+      "minimum_learning_rate": 1e-06,
+      "scheduler_factor": 0.5,
+      "scheduler_patience": 20,
+      "weight_decay": 0.0001
+    },
+    "pairs": [
+      {
+        "best_epoch": 600,
+        "best_validation_mse_joint_head": 0.009811514057219028,
+        "epochs_ran": 600,
+        "gradient_training_seconds": 4978.5244543259905,
+        "hit_epoch_cap": true,
+        "model_seed": 4026729767,
+        "preprocessor_fit_seconds": 1.9023499400063884,
+        "ridge_fit_seconds": 5.5445776999986265,
+        "selected_ridge_alpha": 0.1,
+        "train_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 1,
+          "length": 10000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 1829620129,
+          "rejected_seeds": [
+            854362778
+          ],
+          "requested_seed": 854362778,
+          "sha256_u_and_y": "604d8e911b65205cc47c7d590ba0c04d96a47f6340edd2d6e864ea9395aca304",
+          "stream": "development_train"
+        },
+        "training_seconds": 4980.426804265997,
+        "tuning_pair_id": 10000,
+        "validation_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 2000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 1741581694,
+          "rejected_seeds": [],
+          "requested_seed": 1741581694,
+          "sha256_u_and_y": "d45709d2c68cad24b66aea6a6b1d9a8bee01532b8ecd9d2c219bc09dedcd46f1",
+          "stream": "development_validation"
+        },
+        "validation_mse": 0.008764079515665725,
+        "validation_nrmse": 0.8779396611038118
+      },
+      {
+        "best_epoch": 600,
+        "best_validation_mse_joint_head": 0.008819738402962685,
+        "epochs_ran": 600,
+        "gradient_training_seconds": 4979.397059426992,
+        "hit_epoch_cap": true,
+        "model_seed": 1248173505,
+        "preprocessor_fit_seconds": 1.8391552249959204,
+        "ridge_fit_seconds": 5.612714504008181,
+        "selected_ridge_alpha": 0.01,
+        "train_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 10000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 2029625984,
+          "rejected_seeds": [],
+          "requested_seed": 2029625984,
+          "sha256_u_and_y": "75d8765b8d60e0bfb3618a3f6800502919aab1fe346b5c353fd71cb214663c77",
+          "stream": "development_train"
+        },
+        "training_seconds": 4981.236214651988,
+        "tuning_pair_id": 10001,
+        "validation_manifest": {
+          "acceptance_horizon": 10000,
+          "accepted_input_distribution": "proposal distribution conditioned on a finite target with |y[t]| <= 1e6 over the acceptance horizon",
+          "generation_attempt": 0,
+          "length": 2000,
+          "proposal_input_distribution": "iid Uniform(0, 0.5) from NumPy PCG64",
+          "realized_seed": 4273505966,
+          "rejected_seeds": [],
+          "requested_seed": 4273505966,
+          "sha256_u_and_y": "ef4eaf269fa56982dada9d0773251c46306ebea9274782026c63c53bd4843e03",
+          "stream": "development_validation"
+        },
+        "validation_mse": 0.00779242423028625,
+        "validation_nrmse": 0.8085863179436997
+      }
+    ],
+    "reservoir": {
+      "bias_scale_1": 0.3,
+      "bias_scale_2": 0.1,
+      "density_1": 0.05,
+      "density_2": 0.2,
+      "gru_hidden_size": 22,
+      "input_scale": 0.1,
+      "interlayer_scale": 0.1,
+      "latent_size": 10,
+      "leak_rate_1": 0.1,
+      "leak_rate_2": 0.1,
+      "nodes_1": 150,
+      "nodes_2": 150,
+      "spectral_radius_1": 1.1,
+      "spectral_radius_2": 1.1
+    },
+    "sd_validation_nrmse": 0.04904021924647293,
+    "trial": 3
+  }
+]
