@@ -30,6 +30,8 @@ FIXED = "#2878B5"
 TRAINABLE = "#E07A1F"
 NODE_FILL = "#CFE5F5"
 LATENT_FILL = "#FFD49A"
+PRESERVED = "#B8860B"
+PRESERVED_FILL = "#FFF0B8"
 INK = "#263238"
 
 
@@ -45,9 +47,20 @@ def disk_positions(
 
 
 def latent_positions(center: tuple[float, float], count: int) -> np.ndarray:
+    if count == 2:
+        return np.asarray(
+            [
+                (center[0], center[1] + 0.14),
+                (center[0], center[1] - 0.14),
+            ]
+        )
     columns = 2
     rows = int(np.ceil(count / columns))
-    y_values = np.linspace(center[1] + 0.64, center[1] - 0.64, rows)
+    y_values = (
+        np.asarray([center[1]])
+        if rows == 1
+        else np.linspace(center[1] + 0.64, center[1] - 0.64, rows)
+    )
     positions = [(center[0] + dx, y) for y in y_values for dx in (-0.13, 0.13)]
     return np.asarray(positions[:count])
 
@@ -146,6 +159,7 @@ def draw_architecture(
     total_nodes: int = 300,
     latent_size: int = 10,
     dpi: int = 240,
+    solar_preserved: bool = False,
 ) -> None:
     if reservoirs < 2:
         raise ValueError("at least two reservoirs are required")
@@ -176,7 +190,8 @@ def draw_architecture(
     output_position = np.asarray([[reservoir_centers[-1][0] + 1.62, center_y]])
     x_limit = output_position[0, 0] + 0.55
 
-    figure, axis = plt.subplots(figsize=(24, 7.8))
+    figure_width = max(24.0, 4.3 * reservoirs + 2.0)
+    figure, axis = plt.subplots(figsize=(figure_width, 7.8))
     axis.set_xlim(-0.1, x_limit)
     axis.set_ylim(0.0, 6.4)
     axis.set_aspect("equal")
@@ -288,12 +303,14 @@ def draw_architecture(
         )
 
     for index, nodes in enumerate(latent_nodes, start=1):
+        latent_fill = PRESERVED_FILL if solar_preserved and index == 1 else LATENT_FILL
+        latent_edge = PRESERVED if solar_preserved and index == 1 else TRAINABLE
         axis.scatter(
             nodes[:, 0],
             nodes[:, 1],
             s=72,
-            facecolor=LATENT_FILL,
-            edgecolor=TRAINABLE,
+            facecolor=latent_fill,
+            edgecolor=latent_edge,
             linewidth=1.1,
             zorder=4,
         )
@@ -310,7 +327,15 @@ def draw_architecture(
         axis.text(
             latent_centers[index - 1][0],
             1.48,
-            f"$h_{index}(t)$\n{latent_size} latent",
+            (
+                f"$z_{index}(t)$\n{latent_size}D preserved anchor"
+                if solar_preserved and index == 1
+                else (
+                    f"$z_{index}(t)$\n{latent_size}D latent"
+                    if solar_preserved
+                    else f"$h_{index}(t)$\n{latent_size} latent"
+                )
+            ),
             ha="center",
             va="top",
             fontsize=8.5,
@@ -338,11 +363,16 @@ def draw_architecture(
         )
     )
     axis.text(
-        *input_position[0], "$u(t)$", ha="center", va="center", fontsize=10, zorder=6
+        *input_position[0],
+        r"$\mathbf{u}(t_0)$" if solar_preserved else "$u(t)$",
+        ha="center",
+        va="center",
+        fontsize=10,
+        zorder=6,
     )
     axis.text(
         *output_position[0],
-        "$\\hat{y}(t)$",
+        r"$\hat{\mathbf{y}}(t)$" if solar_preserved else "$\\hat{y}(t)$",
         ha="center",
         va="center",
         fontsize=10,
@@ -375,10 +405,24 @@ def draw_architecture(
         TRAINABLE,
     )
 
+    if solar_preserved:
+        title = f"Preserved {reservoirs}×{nodes_per_reservoir} Solar Reservoir Network"
+        subtitle = (
+            f"{total_nodes:,} fixed recurrent neurons  •  "
+            f"{reservoirs - 1} explicit {latent_size}D bottlenecks  •  "
+            "3,022 trainable parameters"
+        )
+    else:
+        title = f"{reservoirs}-Reservoir Deep Network with Trainable Latent Readouts"
+        subtitle = (
+            f"{total_nodes} recurrent neurons total  •  "
+            f"{nodes_per_reservoir} per reservoir  •  "
+            f"{reservoirs - 1} × {latent_size}-neuron latent spaces"
+        )
     axis.text(
         x_limit / 2,
         6.05,
-        f"{reservoirs}-Reservoir Deep Network with Trainable Latent Readouts",
+        title,
         ha="center",
         fontsize=19,
         fontweight="bold",
@@ -386,8 +430,7 @@ def draw_architecture(
     axis.text(
         x_limit / 2,
         5.68,
-        f"{total_nodes} recurrent neurons total  •  {nodes_per_reservoir} per reservoir  •  "
-        f"{reservoirs - 1} × {latent_size}-neuron latent spaces",
+        subtitle,
         ha="center",
         fontsize=11,
         color="#455A64",
@@ -417,18 +460,43 @@ def draw_architecture(
             label="Latent neuron",
         ),
     ]
+    if solar_preserved:
+        legend.append(
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="none",
+                markerfacecolor=PRESERVED_FILL,
+                markeredgecolor=PRESERVED,
+                markersize=7,
+                label=r"Preserved primary latent $z_1$",
+            )
+        )
     axis.legend(
         handles=legend,
         loc="lower center",
         bbox_to_anchor=(0.5, -0.01),
-        ncol=4,
+        ncol=len(legend),
         frameon=False,
         fontsize=9,
     )
     axis.text(
         x_limit / 2,
         0.43,
-        "All 300 reservoir neurons and all 40 latent neurons are drawn; edges are sampled for readability.",
+        (
+            r"Preservation:  $z_k(t)=z_1(t)+0.1\,\tanh(W_kx_k(t)+b_k)$, "
+            r"$k=2,\ldots,9$  •  "
+            f"all {total_nodes:,} reservoir and "
+            f"{(reservoirs - 1) * latent_size} latent neurons are drawn; "
+            "edges are sampled for readability."
+            if solar_preserved
+            else (
+                f"All {total_nodes} reservoir neurons and all "
+                f"{(reservoirs - 1) * latent_size} latent neurons are drawn; "
+                "edges are sampled for readability."
+            )
+        ),
         ha="center",
         fontsize=8.7,
         color="#607D8B",
@@ -450,6 +518,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--total-nodes", type=int, default=300)
     parser.add_argument("--latent-size", type=int, default=10)
     parser.add_argument("--dpi", type=int, default=240)
+    parser.add_argument(
+        "--solar-preserved",
+        action="store_true",
+        help="Use the exact preserved-solar checkpoint labels and annotations.",
+    )
     return parser.parse_args()
 
 
@@ -461,6 +534,7 @@ def main() -> None:
         total_nodes=args.total_nodes,
         latent_size=args.latent_size,
         dpi=args.dpi,
+        solar_preserved=args.solar_preserved,
     )
     print(f"Saved {args.reservoirs}-reservoir architecture diagram to {args.output}")
 

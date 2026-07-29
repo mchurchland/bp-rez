@@ -1,0 +1,30 @@
+{
+  "latent_alignment_r2": {
+    "preserved_10x150": 0.9878630770632609,
+    "scinet_released_checkpoint": 0.9945886908609951
+  },
+  "latent_alignment_r2_per_component": {
+    "preserved_10x150": [
+      0.9982101361091555,
+      0.9825497628250763
+    ],
+    "scinet_released_checkpoint": [
+      0.9985292657983649,
+      0.9900142787074051
+    ]
+  },
+  "metric": "RMSE / (2*pi), percent",
+  "overall_error_ratio_reservoir_over_scinet": 17.838410170682646,
+  "preserved_10x150": {
+    "mars": 5.184194755103012,
+    "overall": 3.88988888673164,
+    "sun": 1.840270589723133
+  },
+  "scinet_released_checkpoint": {
+    "mars": 0.27379807782101806,
+    "overall": 0.2180625318911355,
+    "sun": 0.1419054199494269
+  },
+  "test_trajectories": 5000,
+  "trajectory_steps": 50
+}
