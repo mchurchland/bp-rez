@@ -1,0 +1,113 @@
+[
+  {
+    "best_validation_mse": 0.08786531537771225,
+    "best_validation_step": 15000,
+    "device": "cuda",
+    "final_latent_delta": [
+      -0.004617519676685333,
+      -0.005642369855195284
+    ],
+    "geocentric_to_latent_r2": 0.9016949905914644,
+    "geocentric_to_latent_r2_per_dimension": [
+      0.9435324313577612,
+      0.837160340418174
+    ],
+    "heliocentric_fit_coefficients": [
+      [
+        -0.06346555040402346,
+        -0.010354325703530311
+      ],
+      [
+        0.04695562155049938,
+        -0.06427897156990738
+      ],
+      [
+        -0.02381864865529635,
+        0.24019874902212135
+      ]
+    ],
+    "heliocentric_fit_expected_delta": [
+      -0.004641337268707899,
+      -0.005363004643722159
+    ],
+    "heliocentric_to_latent_r2": 0.9537632100459907,
+    "heliocentric_to_latent_r2_per_dimension": [
+      0.977066427906481,
+      0.9178177737776767
+    ],
+    "latent_delta_cosine_similarity": 0.999620594734671,
+    "latent_delta_relative_error": 0.039531604751374794,
+    "latent_depth_diagnostics": [
+      {
+        "geocentric_to_latent_r2": 0.9016949905914644,
+        "geocentric_to_latent_r2_per_dimension": [
+          0.9435324313577612,
+          0.837160340418174
+        ],
+        "heliocentric_to_latent_r2": 0.9537632100459907,
+        "heliocentric_to_latent_r2_per_dimension": [
+          0.977066427906481,
+          0.9178177737776767
+        ],
+        "latent_index": 1,
+        "latent_to_geocentric_r2": 0.9151671240625596,
+        "latent_to_geocentric_r2_per_angle": [
+          0.995622219712252,
+          0.8371383918307367
+        ],
+        "latent_to_geocentric_rmse_radians": 0.5312478582093805,
+        "latent_to_heliocentric_r2": 0.9584331903228696,
+        "latent_to_heliocentric_r2_per_angle": [
+          0.995622219712252,
+          0.9203071614195077
+        ],
+        "latent_to_heliocentric_rmse_radians": 0.36673583392855197,
+        "source_reservoir": 1,
+        "test_branch_geocentric_to_latent_r2": 0.8984912230723366,
+        "test_branch_heliocentric_to_latent_r2": 0.6056812962980253,
+        "test_branch_latent_to_geocentric_r2": 0.9135515720270447,
+        "test_branch_latent_to_heliocentric_r2": 0.6501517261691262
+      }
+    ],
+    "latent_to_heliocentric_r2": 0.9584331903228696,
+    "latent_to_heliocentric_r2_per_angle": [
+      0.995622219712252,
+      0.9203071614195077
+    ],
+    "latent_to_heliocentric_rmse_radians": 0.36673583392855197,
+    "learned_latent_delta": [
+      -0.004617519676685333,
+      -0.005642369855195284
+    ],
+    "model": "reservoir",
+    "optimization_steps": 15000,
+    "readout_ridge_alpha": 1e-08,
+    "readout_ridge_fit_seconds": 3.0196069920202717,
+    "readout_ridge_train_rows": 4750000,
+    "readout_ridge_validation_mse": 0.024233840404894205,
+    "readout_ridge_validation_rows": 250000,
+    "seed": 0,
+    "test_branch_heliocentric_to_latent_r2": 0.6056812962980253,
+    "test_branch_latent_to_heliocentric_r2": 0.6501517261691262,
+    "test_mars_curvature_mse": 1.4171765542414505e-05,
+    "test_mars_mse": 0.04095568135380745,
+    "test_mars_rmse_radians": 0.2023751006270471,
+    "test_mars_velocity_mse": 0.0004503602394834161,
+    "test_mse": 0.024058643728494644,
+    "test_relative_rmse_2pi": 0.024686282928989046,
+    "test_rmse_radians": 0.15510849018830222,
+    "test_sun_mse": 0.007161615416407585,
+    "test_sun_rmse_radians": 0.08462632815151314,
+    "trainable_parameters": 610,
+    "training_seconds": 288.25343755295034,
+    "validation_mars_curvature_mse": 1.387847623846028e-05,
+    "validation_mars_mse": 0.040827427059412,
+    "validation_mars_rmse_radians": 0.20205797944998857,
+    "validation_mars_velocity_mse": 0.00044258323032408953,
+    "validation_mse": 0.024233855307102203,
+    "validation_relative_rmse_2pi": 0.024776011099109277,
+    "validation_rmse_radians": 0.15567226890844177,
+    "validation_sun_mse": 0.007640287280082703,
+    "validation_sun_rmse_radians": 0.08740873686355788
+  }
+]
