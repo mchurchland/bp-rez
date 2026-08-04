@@ -30,8 +30,8 @@ def test_size_trial_has_two_matched_reservoirs_and_one_latent_bottleneck():
     assert config.reservoir_layers == 2
     assert config.latent_size == 2
     assert sum(config.phase_steps) == 15_000
-    assert config.second_reservoir_warmup_steps == 20
     assert config.second_reservoir_steps == 3
+    assert config.decoder_bias_scale == 1.0
     assert config.interlayer_scale == 2.0
     assert config.mars_velocity_loss_weight == 1.0
     assert config.mars_curvature_loss_weight == 1.0

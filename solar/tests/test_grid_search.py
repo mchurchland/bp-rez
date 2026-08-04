@@ -8,11 +8,10 @@ from solar.run_grid_search import (
 )
 
 
-def test_grid_has_162_unique_controlled_candidates():
+def test_grid_has_54_unique_controlled_candidates():
     grid = build_grid()
-    assert len(grid) == 162
+    assert len(grid) == 54
     assert len({point.slug for point in grid}) == len(grid)
-    assert {point.warmup_steps for point in grid} == {5, 20, 40}
     assert {point.steps_per_week for point in grid} == {1, 3, 5}
     assert {point.interlayer_scale for point in grid} == {1.0, 2.0, 4.0}
     assert {point.beta_mode for point in grid} == {"paper", "zero"}
@@ -20,7 +19,6 @@ def test_grid_has_162_unique_controlled_candidates():
 
 def test_grid_config_uses_two_layers_and_15k_updates():
     point = GridPoint(
-        warmup_steps=20,
         steps_per_week=3,
         interlayer_scale=2.0,
         velocity_weight=10.0,
@@ -38,8 +36,8 @@ def test_grid_config_uses_two_layers_and_15k_updates():
     assert config.reservoir_layers == 2
     assert config.nodes_1 == config.nodes_2 == 150
     assert sum(config.phase_steps) == 15_000
-    assert config.second_reservoir_warmup_steps == 20
     assert config.second_reservoir_steps == 3
+    assert config.decoder_bias_scale == 1.0
     assert config.phase_betas == (0.0,) * 5
     assert config.mars_velocity_loss_weight == 10.0
     assert config.mars_curvature_loss_weight == 10.0

@@ -99,8 +99,8 @@ def _load_model(
         density=config["density"],
         leak_rate=config["leak_rate"],
         encoder_steps=config["encoder_steps"],
-        second_reservoir_warmup_steps=config["second_reservoir_warmup_steps"],
         second_reservoir_steps=config["second_reservoir_steps"],
+        decoder_bias_scale=config.get("decoder_bias_scale", 1.0),
         scinet_hidden_size=config["scinet_hidden_size"],
         seed=seed,
         preserve_primary_latent=(

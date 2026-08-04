@@ -43,6 +43,7 @@ from .models import (
     SolarReservoir,
     build_solar_model,
 )
+from .ridge import RidgeStatistics, tune_ridge
 
 
 @dataclass
@@ -72,8 +73,16 @@ class SolarExperimentConfig:
     reservoir_layers: int = 10
     latent_size: int = 2
     encoder_steps: int = 3
-    second_reservoir_warmup_steps: int = 20
     second_reservoir_steps: int = 3
+    decoder_bias_scale: float = 1.0
+    readout_ridge_alphas: tuple[float, ...] = (
+        1e-8,
+        1e-7,
+        1e-6,
+        1e-5,
+        1e-4,
+        1e-3,
+    )
     preserve_primary_latent: bool = True
     intermediate_latent_residual_scale: float = 0.1
     intermediate_latent_skip_mode: str = "sequential"
@@ -125,8 +134,14 @@ def _validate_config(config: SolarExperimentConfig) -> None:
         raise ValueError("latent_size must be positive")
     if config.reservoir_layers < 2:
         raise ValueError("reservoir_layers must be at least two")
-    if config.second_reservoir_warmup_steps < 0:
-        raise ValueError("second_reservoir_warmup_steps must be nonnegative")
+    if config.second_reservoir_steps < 1:
+        raise ValueError("second_reservoir_steps must be positive")
+    if config.decoder_bias_scale < 0.0:
+        raise ValueError("decoder_bias_scale must be nonnegative")
+    if not config.readout_ridge_alphas:
+        raise ValueError("at least one readout ridge alpha is required")
+    if min(config.readout_ridge_alphas) < 0.0:
+        raise ValueError("readout ridge alphas must be nonnegative")
     if config.intermediate_latent_residual_scale < 0.0:
         raise ValueError("intermediate_latent_residual_scale must be nonnegative")
     if config.intermediate_latent_skip_mode not in INTERMEDIATE_LATENT_SKIP_MODES:
@@ -396,6 +411,65 @@ def _mars_dynamics_losses(
     return velocity_loss, curvature_loss
 
 
+def _readout_statistics(
+    model: SolarReservoir,
+    dataset: SolarDataset,
+    horizon: int,
+    batch_size: int,
+    device: torch.device,
+) -> RidgeStatistics:
+    """Accumulate final-readout statistics without materializing all features."""
+
+    statistics = RidgeStatistics.empty(model.readout_feature_size, output_size=2)
+    model.eval()
+    with torch.no_grad():
+        for start in range(0, len(dataset), batch_size):
+            stop = min(start + batch_size, len(dataset))
+            observation = dataset.observation[start:stop].to(device)
+            features = model.readout_features(observation, horizon)
+            statistics.update(features, dataset.target[start:stop, :horizon])
+    return statistics
+
+
+def _fit_final_reservoir_readout(
+    model: SolarReservoir,
+    train: SolarDataset,
+    validation: SolarDataset,
+    config: SolarExperimentConfig,
+    device: torch.device,
+) -> dict[str, Any]:
+    """Tune and install a training-only ridge readout after gradient training."""
+
+    start = time.perf_counter()
+    training_statistics = _readout_statistics(
+        model,
+        train,
+        config.series_length,
+        config.evaluation_batch_size,
+        device,
+    )
+    validation_statistics = _readout_statistics(
+        model,
+        validation,
+        config.series_length,
+        config.evaluation_batch_size,
+        device,
+    )
+    alpha, validation_mse, weight, bias = tune_ridge(
+        training_statistics,
+        validation_statistics,
+        config.readout_ridge_alphas,
+    )
+    model.set_readout(weight, bias)
+    return {
+        "readout_ridge_alpha": alpha,
+        "readout_ridge_validation_mse": validation_mse,
+        "readout_ridge_train_rows": training_statistics.rows,
+        "readout_ridge_validation_rows": validation_statistics.rows,
+        "readout_ridge_fit_seconds": time.perf_counter() - start,
+    }
+
+
 def train_solar_model(
     model: SolarModelBase,
     train: SolarDataset,
@@ -591,11 +665,23 @@ def train_solar_model(
                     )
                 print(message, flush=True)
 
+    gradient_training_seconds = time.perf_counter() - start_time
+    ridge_info: dict[str, Any] = {}
+    if isinstance(model, SolarReservoir):
+        ridge_info = _fit_final_reservoir_readout(
+            model,
+            train,
+            validation,
+            config,
+            device,
+        )
+
     train_info: dict[str, Any] = {
         "optimization_steps": global_step,
         "best_validation_mse": best_validation_mse,
         "best_validation_step": best_validation_step,
-        "training_seconds": time.perf_counter() - start_time,
+        "training_seconds": gradient_training_seconds,
+        **ridge_info,
     }
     train_info.update(
         {f"final_{key}": value for key, value in final_diagnostics.items()}
@@ -1139,8 +1225,8 @@ def run_solar_experiment(
                 density=config.density,
                 leak_rate=config.leak_rate,
                 encoder_steps=config.encoder_steps,
-                second_reservoir_warmup_steps=(config.second_reservoir_warmup_steps),
                 second_reservoir_steps=config.second_reservoir_steps,
+                decoder_bias_scale=config.decoder_bias_scale,
                 scinet_hidden_size=config.scinet_hidden_size,
                 seed=seed,
                 preserve_primary_latent=config.preserve_primary_latent,

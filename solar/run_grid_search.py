@@ -35,7 +35,6 @@ SELECTION_CURVATURE_WEIGHT = 10.0
 
 @dataclass(frozen=True)
 class GridPoint:
-    warmup_steps: int
     steps_per_week: int
     interlayer_scale: float
     velocity_weight: float
@@ -48,8 +47,7 @@ class GridPoint:
             return f"{value:g}".replace(".", "p")
 
         return (
-            f"warmup-{self.warmup_steps:02d}"
-            f"_steps-{self.steps_per_week:02d}"
+            f"steps-{self.steps_per_week:02d}"
             f"_scale-{token(self.interlayer_scale)}"
             f"_velocity-{token(self.velocity_weight)}"
             f"_curvature-{token(self.curvature_weight)}"
@@ -80,9 +78,8 @@ def parse_args() -> argparse.Namespace:
 
 def build_grid() -> list[GridPoint]:
     points = [
-        GridPoint(warmup, steps, scale, velocity, curvature, beta_mode)
-        for warmup, steps, scale, (velocity, curvature), beta_mode in itertools.product(
-            (5, 20, 40),
+        GridPoint(steps, scale, velocity, curvature, beta_mode)
+        for steps, scale, (velocity, curvature), beta_mode in itertools.product(
             (1, 3, 5),
             (1.0, 2.0, 4.0),
             ((1.0, 1.0), (10.0, 10.0), (30.0, 10.0)),
@@ -124,8 +121,8 @@ def build_config(
             reservoir_layers=2,
             latent_size=2,
             encoder_steps=2,
-            second_reservoir_warmup_steps=point.warmup_steps,
             second_reservoir_steps=point.steps_per_week,
+            decoder_bias_scale=1.0,
             interlayer_scale=point.interlayer_scale,
             density=0.4,
             phase_steps=(1,),
@@ -156,8 +153,8 @@ def build_config(
         reservoir_layers=2,
         latent_size=2,
         encoder_steps=3,
-        second_reservoir_warmup_steps=point.warmup_steps,
         second_reservoir_steps=point.steps_per_week,
+        decoder_bias_scale=1.0,
         spectral_radius=0.9,
         density=0.1,
         leak_rate=1.0,
@@ -204,7 +201,6 @@ def leaderboard_record(
         "validation_mars_mse": metrics["validation_mars_mse"],
         "validation_mars_velocity_mse": metrics["validation_mars_velocity_mse"],
         "validation_mars_curvature_mse": metrics["validation_mars_curvature_mse"],
-        "warmup_steps": point.warmup_steps,
         "steps_per_week": point.steps_per_week,
         "interlayer_scale": point.interlayer_scale,
         "velocity_weight": point.velocity_weight,
@@ -259,8 +255,8 @@ def run_trial(
         density=config.density,
         leak_rate=config.leak_rate,
         encoder_steps=config.encoder_steps,
-        second_reservoir_warmup_steps=config.second_reservoir_warmup_steps,
         second_reservoir_steps=config.second_reservoir_steps,
+        decoder_bias_scale=config.decoder_bias_scale,
         scinet_hidden_size=config.scinet_hidden_size,
         seed=seed,
         preserve_primary_latent=config.preserve_primary_latent,
@@ -339,7 +335,6 @@ def main() -> None:
             "selection_uses_test_data": False,
             "time_budget_hours": args.time_budget_hours,
             "grid": {
-                "warmup_steps": [5, 20, 40],
                 "steps_per_week": [1, 3, 5],
                 "interlayer_scale": [1.0, 2.0, 4.0],
                 "shape_loss_weights": [[1.0, 1.0], [10.0, 10.0], [30.0, 10.0]],

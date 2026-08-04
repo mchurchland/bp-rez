@@ -119,8 +119,8 @@ def _load_grid_model(
         density=config["density"],
         leak_rate=config["leak_rate"],
         encoder_steps=config["encoder_steps"],
-        second_reservoir_warmup_steps=config["second_reservoir_warmup_steps"],
         second_reservoir_steps=config["second_reservoir_steps"],
+        decoder_bias_scale=config.get("decoder_bias_scale", 1.0),
         scinet_hidden_size=config["scinet_hidden_size"],
         seed=checkpoint["seed"],
         preserve_primary_latent=config.get("preserve_primary_latent", False),
@@ -366,34 +366,7 @@ def _latent_diagnostics(
 def _reservoir_features_from_latents(
     model: SolarReservoir, primary_latents: torch.Tensor
 ) -> torch.Tensor:
-    states = [
-        primary_latents.new_zeros((len(primary_latents), nodes))
-        for nodes in model.reservoir_sizes[1:]
-    ]
-    features = []
-    for time_index in range(primary_latents.shape[1]):
-        current = primary_latents[:, time_index]
-        update_count = (
-            model.second_reservoir_warmup_steps
-            if time_index == 0
-            else model.second_reservoir_steps
-        )
-        for layer_index, state in enumerate(states):
-            recurrent = getattr(model, model._recurrent_names[layer_index + 1])
-            projection = getattr(model, model._projection_names[layer_index])
-            drive = current @ projection.T
-            for _ in range(update_count):
-                state = model._update(state, recurrent, drive)
-            states[layer_index] = state
-            if layer_index < len(model.intermediate_weights):
-                current = model._intermediate_latent(
-                    state,
-                    primary_latents[:, time_index],
-                    current,
-                    layer_index,
-                )
-        features.append(states[-1])
-    return torch.stack(features, dim=1)
+    return model.readout_features_from_primary_latents(primary_latents)
 
 
 def _predict_from_primary_latents(
@@ -446,7 +419,7 @@ def _fit_validation_readout(
     device: torch.device,
     ridge: float,
 ) -> np.ndarray:
-    width = model.reservoir_sizes[-1] + 1
+    width = model.readout_feature_size + 1
     xtx = np.zeros((width, width), dtype=np.float64)
     xty = np.zeros((width, 2), dtype=np.float64)
     for features, target in _feature_batches(model, validation, batch_size, device):

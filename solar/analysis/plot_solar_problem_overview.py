@@ -707,53 +707,21 @@ def draw_solution_panel(axis: plt.Axes) -> None:
         fontweight="bold",
         color=MARS,
     )
-    axis.add_patch(
-        Arc(
-            sun,
-            inner_radius * 2.0,
-            inner_radius * 2.0,
-            theta1=205,
-            theta2=330,
-            color=EARTH,
-            linewidth=3.2,
-            zorder=3,
-        )
+    arrow(
+        axis,
+        orbit_point(sun, inner_radius, 92),
+        orbit_point(sun, inner_radius, 70),
+        color=EARTH,
+        linewidth=1.7,
+        connectionstyle="arc3,rad=-0.18",
     )
-    axis.add_patch(
-        FancyArrowPatch(
-            orbit_point(sun, inner_radius, 319),
-            orbit_point(sun, inner_radius, 331),
-            arrowstyle="-|>",
-            mutation_scale=21,
-            color=EARTH,
-            linewidth=3.0,
-            connectionstyle="arc3,rad=0.05",
-            zorder=5,
-        )
-    )
-    axis.add_patch(
-        Arc(
-            sun,
-            outer_radius * 2.0,
-            outer_radius * 2.0,
-            theta1=24,
-            theta2=132,
-            color=MARS,
-            linewidth=3.2,
-            zorder=3,
-        )
-    )
-    axis.add_patch(
-        FancyArrowPatch(
-            orbit_point(sun, outer_radius, 122),
-            orbit_point(sun, outer_radius, 133),
-            arrowstyle="-|>",
-            mutation_scale=21,
-            color=MARS,
-            linewidth=3.0,
-            connectionstyle="arc3,rad=0.05",
-            zorder=5,
-        )
+    arrow(
+        axis,
+        orbit_point(sun, outer_radius, 174),
+        orbit_point(sun, outer_radius, 154),
+        color=MARS,
+        linewidth=1.7,
+        connectionstyle="arc3,rad=-0.14",
     )
 
     axis.text(

@@ -39,7 +39,7 @@ The active `reservoir` model has 10 reservoir layers with 150 neurons each and
 a separate two-neuron bottleneck between every adjacent pair. All recurrent
 matrices and input projections remain fixed after random initialization. The
 nine bottlenecks, eight residual gates, and final readout are optimized, giving
-3,030 trainable parameters in the default 10-by-150 configuration.
+3,034 trainable parameters in the default 10-by-150 configuration.
 
 ```text
 x1[k+1] = (1-a)x1[k] + a tanh(A1 x1[k] + B1 observation)
@@ -47,24 +47,30 @@ z1[0]   = tanh(W1 x1[K] + b1)
 z1[t+1] = z1[t] + delta
 
 for reservoir layers l = 2, ..., 10:
-    xl[t] = recurrent_updates(Al, Rl z(l-1)[t])
+    xl[0,t] = 0
+    xl[k+1,t] = (1-a)xl[k,t] + a tanh(Al xl[k,t] + Rl z(l-1)[t] + ql)
     if l < 10:
         residual_l[t] = tanh(Wl xl[t] + bl)
         alpha_l = alpha_max tanh(gate_l)
         zl[t] = z(l-1)[t] + alpha_l residual_l[t]
-    if l = 10: yhat[t] = Wout xl[t] + c
+    if l = 10: yhat[t] = Wout [z1[t], xl[t]] + c
 ```
 
 The first reservoir is driven for `--encoder-steps` updates by the initial
 observation. Its bottleneck is the primary representation used by the
 heliocentric analysis and follows the learned constant update. Each of the
-remaining nine reservoirs is initialized once per trajectory, receives 20
-preliminary updates at week zero, and retains its own state across the complete
-forecast. Each produces the input to the following two-neuron bottleneck. At
-later weeks every downstream reservoir receives three recurrent updates. The
-counts remain configurable with `--second-reservoir-warmup-steps` and
-`--second-reservoir-steps`; `--reservoir-layers` controls the stack depth.
-The latent input scale is `2.0`.
+remaining nine reservoirs is reset to zero independently at every week and
+receives the same number of recurrent updates. This makes the decoder a
+single-valued instantaneous map instead of a temporal system with lag. Fixed
+random neuron biases `ql`, controlled by `--decoder-bias-scale`, place different
+`tanh` bends in different parts of latent space. The update count remains
+configurable with `--second-reservoir-steps`; `--reservoir-layers` controls the
+stack depth. The latent input scale is `2.0`.
+
+The final linear head receives the primary two-dimensional latent directly in
+addition to the last reservoir state. After gradient training, this head is
+replaced by a training-set ridge solution; the ridge coefficient is selected on
+validation data from `--readout-ridge-alphas`. The intercept is not penalized.
 
 By default, `--preserve-primary-latent` and
 `--intermediate-latent-skip-mode sequential` use a separate learnable residual
@@ -239,12 +245,11 @@ advantage, and training time.
 
 The search holds the two-layer, 150-neuron-per-layer architecture, data split,
 model seed, minibatch sampling, and 15,000-update curriculum constant. It
-contains 162 combinations of:
+contains 54 combinations of:
 
 | Setting | Values |
 |---|---|
-| Preliminary updates | 5, 20, 40 |
-| Updates per forecast week | 1, 3, 5 |
+| Stateless updates per forecast week | 1, 3, 5 |
 | Interlayer scale | 1, 2, 4 |
 | Velocity/curvature weights | (1, 1), (10, 10), (30, 10) |
 | Reservoir beta schedule | paper schedule, all zeros |

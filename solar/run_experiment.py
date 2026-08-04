@@ -43,16 +43,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--latent-size", type=int, default=defaults.latent_size)
     parser.add_argument("--encoder-steps", type=int, default=defaults.encoder_steps)
     parser.add_argument(
-        "--second-reservoir-warmup-steps",
-        type=int,
-        default=defaults.second_reservoir_warmup_steps,
-        help="Initial updates in each downstream reservoir at week zero",
-    )
-    parser.add_argument(
         "--second-reservoir-steps",
         type=int,
         default=defaults.second_reservoir_steps,
-        help="Updates in each downstream reservoir per forecast week",
+        help="Stateless updates from zero in each downstream reservoir per week",
+    )
+    parser.add_argument(
+        "--decoder-bias-scale",
+        type=float,
+        default=defaults.decoder_bias_scale,
+        help="Scale of fixed random downstream-reservoir neuron biases",
+    )
+    parser.add_argument(
+        "--readout-ridge-alphas",
+        type=float,
+        nargs="+",
+        default=list(defaults.readout_ridge_alphas),
+        help="Candidate mean-scaled ridge penalties for the final readout",
     )
     parser.add_argument(
         "--preserve-primary-latent",
@@ -197,8 +204,9 @@ def main() -> None:
         reservoir_layers=args.reservoir_layers,
         latent_size=args.latent_size,
         encoder_steps=args.encoder_steps,
-        second_reservoir_warmup_steps=args.second_reservoir_warmup_steps,
         second_reservoir_steps=args.second_reservoir_steps,
+        decoder_bias_scale=args.decoder_bias_scale,
+        readout_ridge_alphas=tuple(args.readout_ridge_alphas),
         preserve_primary_latent=args.preserve_primary_latent,
         intermediate_latent_residual_scale=(args.intermediate_latent_residual_scale),
         intermediate_latent_skip_mode=args.intermediate_latent_skip_mode,

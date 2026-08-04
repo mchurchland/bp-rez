@@ -56,11 +56,13 @@ class SolarReservoir(SolarModelBase):
 
     The initial Earth-view observation passes through the first reservoir. Its
     bottleneck is constrained to evolve by addition of one learned constant per
-    week. Each later reservoir retains its own recurrent state across forecast
-    weeks. Its trainable low-dimensional readout can either replace the
-    preceding representation (the legacy behavior) or provide a bounded
-    residual around the primary or preceding physical latent. The final
-    reservoir produces features for the trainable readout.
+    week. Each later reservoir is a stateless nonlinear feature map: its state
+    starts at zero for every forecast week, receives the same number of updates,
+    and includes a fixed random neuron bias. Its trainable low-dimensional
+    readout can either replace the preceding representation (the legacy
+    behavior) or provide a bounded residual around the primary or preceding
+    physical latent. The final readout receives both the primary latent and the
+    final reservoir features.
     """
 
     uses_mars_dynamics_loss = True
@@ -77,8 +79,8 @@ class SolarReservoir(SolarModelBase):
         density: float,
         leak_rate: float,
         encoder_steps: int,
-        second_reservoir_warmup_steps: int,
         second_reservoir_steps: int,
+        decoder_bias_scale: float,
         seed: int,
         reservoir_layers: int = 2,
         nonlinear: bool = True,
@@ -95,8 +97,8 @@ class SolarReservoir(SolarModelBase):
             raise ValueError(
                 "encoder_steps and second_reservoir_steps must be positive"
             )
-        if second_reservoir_warmup_steps < 0:
-            raise ValueError("second_reservoir_warmup_steps must be nonnegative")
+        if decoder_bias_scale < 0.0:
+            raise ValueError("decoder_bias_scale must be nonnegative")
         if intermediate_latent_residual_scale < 0.0:
             raise ValueError("intermediate_latent_residual_scale must be nonnegative")
         if intermediate_latent_skip_mode not in INTERMEDIATE_LATENT_SKIP_MODES:
@@ -113,8 +115,8 @@ class SolarReservoir(SolarModelBase):
         self.latent_size = latent_size
         self.leak_rate = leak_rate
         self.encoder_steps = encoder_steps
-        self.second_reservoir_warmup_steps = second_reservoir_warmup_steps
         self.second_reservoir_steps = second_reservoir_steps
+        self.decoder_bias_scale = decoder_bias_scale
         self.nonlinear = nonlinear
         self.preserve_primary_latent = preserve_primary_latent
         self.intermediate_latent_residual_scale = intermediate_latent_residual_scale
@@ -139,6 +141,15 @@ class SolarReservoir(SolarModelBase):
             )
             projection_names.append(name)
         self._projection_names = tuple(projection_names)
+        decoder_bias_names = []
+        for layer, nodes in enumerate(self.reservoir_sizes[1:], start=2):
+            name = f"q{layer}"
+            self.register_buffer(
+                name,
+                make_projection(nodes, 1, decoder_bias_scale, generator).squeeze(-1),
+            )
+            decoder_bias_names.append(name)
+        self._decoder_bias_names = tuple(decoder_bias_names)
         self.W = nn.Parameter(torch.empty(latent_size, nodes_1))
         self.b = nn.Parameter(torch.zeros(latent_size))
         self.latent_delta = nn.Parameter(torch.zeros(latent_size))
@@ -157,7 +168,8 @@ class SolarReservoir(SolarModelBase):
             )
         else:
             self.register_parameter("intermediate_residual_gates", None)
-        self.W_out = nn.Parameter(torch.empty(2, nodes_2))
+        self.readout_feature_size = latent_size + nodes_2
+        self.W_out = nn.Parameter(torch.empty(2, self.readout_feature_size))
         self.c = nn.Parameter(torch.zeros(2))
         nn.init.xavier_uniform_(self.W, generator=generator)
         nn.init.xavier_uniform_(self.W_out, generator=generator)
@@ -166,10 +178,21 @@ class SolarReservoir(SolarModelBase):
     def fixed_matrix_names(self) -> tuple[str, ...]:
         return self._recurrent_names + ("B1",) + self._projection_names
 
+    @property
+    def fixed_decoder_bias_names(self) -> tuple[str, ...]:
+        return self._decoder_bias_names
+
     def _update(
-        self, state: torch.Tensor, recurrent: torch.Tensor, drive: torch.Tensor
+        self,
+        state: torch.Tensor,
+        recurrent: torch.Tensor,
+        drive: torch.Tensor,
+        bias: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        candidate = torch.tanh(state @ recurrent.T + drive)
+        preactivation = state @ recurrent.T + drive
+        if bias is not None:
+            preactivation = preactivation + bias
+        candidate = torch.tanh(preactivation)
         return (1.0 - self.leak_rate) * state + self.leak_rate * candidate
 
     def encode(self, observation: torch.Tensor) -> torch.Tensor:
@@ -213,36 +236,29 @@ class SolarReservoir(SolarModelBase):
         alphas = self.intermediate_residual_alphas()
         return previous_latent + alphas[layer_index] * intermediate
 
-    def _run_reservoir_stack(
-        self, initial_latent: torch.Tensor, horizon: int
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        if horizon < 1:
-            raise ValueError("horizon must be positive")
-        states = [
-            initial_latent.new_zeros((len(initial_latent), nodes))
-            for nodes in self.reservoir_sizes[1:]
-        ]
-        predictions = []
-        primary_latents = []
+    def _decoder_features_from_primary_latents(
+        self, primary_latents: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if primary_latents.ndim != 3 or primary_latents.shape[-1] != self.latent_size:
+            raise ValueError(
+                "primary_latents must have shape [batch, time, latent_size]"
+            )
+        if primary_latents.shape[1] < 1:
+            raise ValueError("primary_latents must contain at least one time step")
+        readout_features = []
         all_latents = []
-        primary_latent = initial_latent
-        for time_index in range(horizon):
-            if time_index > 0:
-                primary_latent = primary_latent + self.latent_delta
+        for primary_latent in primary_latents.unbind(dim=1):
             current = primary_latent
             time_latents = [current]
-            update_count = (
-                self.second_reservoir_warmup_steps
-                if time_index == 0
-                else self.second_reservoir_steps
-            )
-            for layer_index, state in enumerate(states):
+            final_state = None
+            for layer_index, nodes in enumerate(self.reservoir_sizes[1:]):
+                state = primary_latent.new_zeros((len(primary_latent), nodes))
                 recurrent = getattr(self, self._recurrent_names[layer_index + 1])
                 projection = getattr(self, self._projection_names[layer_index])
+                bias = getattr(self, self._decoder_bias_names[layer_index])
                 drive = current @ projection.T
-                for _ in range(update_count):
-                    state = self._update(state, recurrent, drive)
-                states[layer_index] = state
+                for _ in range(self.second_reservoir_steps):
+                    state = self._update(state, recurrent, drive, bias)
                 if layer_index < len(self.intermediate_weights):
                     current = self._intermediate_latent(
                         state,
@@ -252,20 +268,74 @@ class SolarReservoir(SolarModelBase):
                     )
                     time_latents.append(current)
                 else:
-                    predictions.append(state @ self.W_out.T + self.c)
-            primary_latents.append(primary_latent)
+                    final_state = state
+            if final_state is None:
+                raise RuntimeError("decoder reservoir stack produced no features")
+            readout_features.append(torch.cat((primary_latent, final_state), dim=-1))
             all_latents.append(torch.stack(time_latents, dim=1))
+        return torch.stack(readout_features, dim=1), torch.stack(all_latents, dim=1)
+
+    def readout_features_from_primary_latents(
+        self, primary_latents: torch.Tensor
+    ) -> torch.Tensor:
+        """Return ``[z, x]`` features with every week's reservoir state reset."""
+
+        return self._decoder_features_from_primary_latents(primary_latents)[0]
+
+    def readout_features(
+        self, observation: torch.Tensor, horizon: int
+    ) -> torch.Tensor:
+        """Return final-readout features without applying the readout itself."""
+
+        if horizon < 1:
+            raise ValueError("horizon must be positive")
+        initial_latent = self.encode(observation)
+        steps = torch.arange(
+            horizon, device=initial_latent.device, dtype=initial_latent.dtype
+        )
+        primary_latents = (
+            initial_latent[:, None, :]
+            + steps[None, :, None] * self.latent_delta[None, None, :]
+        )
+        return self.readout_features_from_primary_latents(primary_latents)
+
+    def set_readout(self, weight: torch.Tensor, bias: torch.Tensor) -> None:
+        """Install an independently fitted final linear readout."""
+
+        if weight.shape != self.W_out.shape or bias.shape != self.c.shape:
+            raise ValueError("ridge readout dimensions do not match the model")
+        with torch.no_grad():
+            self.W_out.copy_(weight.to(device=self.W_out.device, dtype=self.W_out.dtype))
+            self.c.copy_(bias.to(device=self.c.device, dtype=self.c.dtype))
+
+    def _run_reservoir_stack(
+        self, initial_latent: torch.Tensor, horizon: int
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        if horizon < 1:
+            raise ValueError("horizon must be positive")
+        steps = torch.arange(
+            horizon, device=initial_latent.device, dtype=initial_latent.dtype
+        )
+        primary_latents = (
+            initial_latent[:, None, :]
+            + steps[None, :, None] * self.latent_delta[None, None, :]
+        )
+        readout_features, all_latents = self._decoder_features_from_primary_latents(
+            primary_latents
+        )
+        predictions = readout_features @ self.W_out.T + self.c
         return (
-            torch.stack(predictions, dim=1),
-            torch.stack(primary_latents, dim=1),
-            torch.stack(all_latents, dim=1),
+            predictions,
+            primary_latents,
+            all_latents,
+            readout_features,
         )
 
     def training_forward(
         self, observation: torch.Tensor, horizon: int
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         initial_latent = self.encode(observation)
-        prediction, latents, all_latents = self._run_reservoir_stack(
+        prediction, latents, all_latents, _ = self._run_reservoir_stack(
             initial_latent, horizon
         )
         # Deterministic analogue of SciNet's mean part of the beta-VAE KL.
@@ -275,7 +345,7 @@ class SolarReservoir(SolarModelBase):
     def predict_with_latents(
         self, observation: torch.Tensor, horizon: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        prediction, primary_latents, _ = self._run_reservoir_stack(
+        prediction, primary_latents, _, _ = self._run_reservoir_stack(
             self.encode(observation), horizon
         )
         return prediction, primary_latents
@@ -285,7 +355,7 @@ class SolarReservoir(SolarModelBase):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Return predictions and every inter-reservoir representation."""
 
-        prediction, _, all_latents = self._run_reservoir_stack(
+        prediction, _, all_latents, _ = self._run_reservoir_stack(
             self.encode(observation), horizon
         )
         return prediction, all_latents
@@ -416,8 +486,8 @@ def build_solar_model(
     density: float,
     leak_rate: float,
     encoder_steps: int,
-    second_reservoir_warmup_steps: int,
     second_reservoir_steps: int,
+    decoder_bias_scale: float,
     scinet_hidden_size: int,
     seed: int,
     preserve_primary_latent: bool = False,
@@ -436,8 +506,8 @@ def build_solar_model(
             density=density,
             leak_rate=leak_rate,
             encoder_steps=encoder_steps,
-            second_reservoir_warmup_steps=second_reservoir_warmup_steps,
             second_reservoir_steps=second_reservoir_steps,
+            decoder_bias_scale=decoder_bias_scale,
             seed=seed,
             preserve_primary_latent=preserve_primary_latent,
             intermediate_latent_residual_scale=(intermediate_latent_residual_scale),

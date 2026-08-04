@@ -28,8 +28,8 @@ def reservoir(seed: int = 3) -> SolarReservoir:
         density=0.4,
         leak_rate=0.8,
         encoder_steps=2,
-        second_reservoir_warmup_steps=4,
         second_reservoir_steps=2,
+        decoder_bias_scale=1.0,
         seed=seed,
     )
 
@@ -64,6 +64,11 @@ def test_reservoir_has_registered_matrices_and_additive_latent_dynamics():
         assert name not in parameters
         assert name in buffers
         assert buffers[name].requires_grad is False
+    assert len(model.fixed_decoder_bias_names) == 1
+    for name in model.fixed_decoder_bias_names:
+        assert name not in parameters
+        assert name in buffers
+        assert torch.count_nonzero(buffers[name]).item() > 0
     observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
     prediction, latents = model.predict_with_latents(observation, horizon=5)
     assert prediction.shape == (2, 5, 2)
@@ -72,23 +77,37 @@ def test_reservoir_has_registered_matrices_and_additive_latent_dynamics():
     assert torch.allclose(latents[:, 1:] - latents[:, :-1], expected_delta)
 
 
-def test_second_reservoir_carries_state_across_forecast_weeks():
+def test_decoder_resets_state_and_uses_the_same_biased_map_each_week():
     model = reservoir()
     observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
     prediction, latents = model.predict_with_latents(observation, horizon=5)
 
-    state = torch.zeros((len(observation), model.nodes_2))
-    latent_sequence = latents.unbind(dim=1)
-    initial_drive = latent_sequence[0] @ model.R.T
-    for _ in range(model.second_reservoir_warmup_steps):
-        state = model._update(state, model.A2, initial_drive)
-    expected = [state @ model.W_out.T + model.c]
-    for latent in latent_sequence[1:]:
+    expected = []
+    for latent in latents.unbind(dim=1):
+        state = torch.zeros((len(observation), model.nodes_2))
         drive = latent @ model.R.T
         for _ in range(model.second_reservoir_steps):
-            state = model._update(state, model.A2, drive)
-        expected.append(state @ model.W_out.T + model.c)
+            state = model._update(state, model.A2, drive, model.q2)
+        features = torch.cat((latent, state), dim=-1)
+        expected.append(features @ model.W_out.T + model.c)
     assert torch.allclose(prediction, torch.stack(expected, dim=1))
+
+    repeated_latent = latents[:, :1].expand(-1, 3, -1)
+    repeated_features = model.readout_features_from_primary_latents(repeated_latent)
+    assert torch.equal(repeated_features[:, 0], repeated_features[:, 1])
+    assert torch.equal(repeated_features[:, 1], repeated_features[:, 2])
+
+
+def test_final_readout_includes_a_direct_primary_latent_skip():
+    model = reservoir()
+    observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
+    with torch.no_grad():
+        model.W_out.zero_()
+        model.W_out[:, : model.latent_size].copy_(torch.eye(2))
+        model.c.zero_()
+    prediction, latents = model.predict_with_latents(observation, horizon=5)
+    assert model.W_out.shape == (2, model.latent_size + model.nodes_2)
+    assert torch.allclose(prediction, latents)
 
 
 def test_solar_forecast_backpropagates_through_second_reservoir():
@@ -115,8 +134,8 @@ def test_ten_reservoir_layers_have_nine_two_neuron_bottlenecks():
         density=0.5,
         leak_rate=0.8,
         encoder_steps=2,
-        second_reservoir_warmup_steps=2,
         second_reservoir_steps=2,
+        decoder_bias_scale=1.0,
         seed=5,
     )
     observation = torch.tensor([[0.2, -0.4], [1.0, 0.5]])
@@ -146,8 +165,8 @@ def test_primary_latent_is_preserved_by_bounded_intermediate_residuals():
         density=0.5,
         leak_rate=0.8,
         encoder_steps=2,
-        second_reservoir_warmup_steps=2,
         second_reservoir_steps=2,
+        decoder_bias_scale=1.0,
         seed=5,
         preserve_primary_latent=True,
         intermediate_latent_residual_scale=residual_scale,
@@ -173,8 +192,8 @@ def test_sequential_latents_use_bounded_learnable_residual_gates():
         density=0.5,
         leak_rate=0.8,
         encoder_steps=2,
-        second_reservoir_warmup_steps=2,
         second_reservoir_steps=2,
+        decoder_bias_scale=1.0,
         seed=5,
         preserve_primary_latent=True,
         intermediate_latent_residual_scale=residual_scale,
@@ -273,8 +292,8 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
         nodes_2=10,
         latent_size=2,
         encoder_steps=2,
-        second_reservoir_warmup_steps=4,
         second_reservoir_steps=2,
+        decoder_bias_scale=1.0,
         scinet_hidden_size=12,
         density=0.4,
         phase_steps=(1,),
@@ -331,6 +350,11 @@ def test_solar_smoke_run_writes_analysis_artifacts(tmp_path):
         else:
             assert (run_dir / "latent_r2_by_depth.png").is_file()
             assert len(metrics["final_intermediate_residual_alphas"]) == 8
+            assert metrics["readout_ridge_alpha"] in config.readout_ridge_alphas
+            assert np.isfinite(metrics["readout_ridge_validation_mse"])
+            assert metrics["readout_ridge_train_rows"] == (
+                config.train_samples * config.series_length
+            )
             assert len(history["representation_loss"]) == 2
             assert len(history["mars_velocity_loss"]) == 2
             assert len(history["mars_curvature_loss"]) == 2

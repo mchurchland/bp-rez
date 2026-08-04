@@ -63,7 +63,6 @@ srun python -u -m solar.run_experiment \
     --reservoir-layers 10 \
     --latent-size 2 \
     --encoder-steps 3 \
-    --second-reservoir-warmup-steps 20 \
     --second-reservoir-steps 3 \
     --preserve-primary-latent \
     --intermediate-latent-skip-mode primary \

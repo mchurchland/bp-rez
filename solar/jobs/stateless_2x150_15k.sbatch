@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=solar-10x150-jump
+#SBATCH --job-name=solar-2x150-fix
 #SBATCH --output=solar/jobs/logs/%x-%j.out
 #SBATCH --error=solar/jobs/logs/%x-%j.out
-#SBATCH --time=03:00:00
+#SBATCH --time=01:30:00
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=24G
+#SBATCH --mem=16G
 #SBATCH --gres=gpu:1
 
+# Two 150-neuron reservoirs, one explicit 2D bottleneck, and 15,000 updates.
+# Scale, beta, and Mars-loss weights match the previous 2x150 grid winner so
+# the stateless biased decoder, direct latent skip, and ridge head are isolated.
 # Submit with:
-#   sbatch solar/jobs/sequential_10x150.sbatch
+#   sbatch solar/jobs/stateless_2x150_15k.sbatch
 #
 # Optional overrides:
-#   CONDA_ENV=base sbatch solar/jobs/sequential_10x150.sbatch
-#   sbatch --export=ALL,SOLAR_OUTPUT_DIR=solar/results/my-run \
-#     solar/jobs/sequential_10x150.sbatch
+#   CONDA_ENV=base sbatch solar/jobs/stateless_2x150_15k.sbatch
+#   sbatch --export=ALL,SOLAR_OUTPUT_DIR=solar/results/my-2x150-run \
+#     solar/jobs/stateless_2x150_15k.sbatch
 
 # Some cluster Conda distributions have deactivate hooks that read optional
 # variables without defaults. Enable nounset only after Conda activation.
@@ -44,7 +47,7 @@ echo "Conda environment: $CONDA_ENV"
 echo "Python: $(command -v python)"
 python -c 'import torch; print("PyTorch:", torch.__version__); print("CUDA available:", torch.cuda.is_available()); print("GPU:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none")'
 
-SOLAR_OUTPUT_DIR="${SOLAR_OUTPUT_DIR:-solar/results/solar-10x150-sequential-15k-${SLURM_JOB_ID:-local}}"
+SOLAR_OUTPUT_DIR="${SOLAR_OUTPUT_DIR:-solar/results/solar-2x150-decoder-fix-15k-${SLURM_JOB_ID:-local}}"
 echo "Output: $SOLAR_OUTPUT_DIR"
 
 srun python -u -m solar.run_experiment \
@@ -60,25 +63,24 @@ srun python -u -m solar.run_experiment \
     --sampling-mode independent_catalog \
     --nodes-1 150 \
     --nodes-2 150 \
-    --reservoir-layers 10 \
+    --reservoir-layers 2 \
     --latent-size 2 \
     --encoder-steps 3 \
     --second-reservoir-steps 3 \
-    --preserve-primary-latent \
-    --intermediate-latent-skip-mode sequential \
-    --intermediate-latent-residual-scale 0.1 \
+    --decoder-bias-scale 1 \
     --spectral-radius 0.9 \
     --density 0.1 \
     --leak-rate 1 \
     --input-scale 0.5 \
-    --interlayer-scale 2 \
+    --interlayer-scale 4 \
     --phase-steps 1000 1000 1000 1000 11000 \
     --phase-batch-sizes 256 1024 1024 2048 2048 \
     --phase-learning-rates 1e-4 1e-4 1e-4 1e-5 1e-5 \
-    --phase-betas 0.1 0.1 0.1 0.01 0.001 \
+    --phase-betas 0 0 0 0 0 \
     --phase-horizons 20 20 50 50 50 \
-    --mars-velocity-loss-weight 1 \
-    --mars-curvature-loss-weight 1 \
+    --mars-velocity-loss-weight 30 \
+    --mars-curvature-loss-weight 10 \
+    --readout-ridge-alphas 1e-8 1e-7 1e-6 1e-5 1e-4 1e-3 \
     --training-log-interval 100 \
     --validation-interval 250 \
     --validation-subset 1024 \
