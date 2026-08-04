@@ -1,0 +1,13 @@
+[
+  {
+    "heliocentric_to_latent_r2_mean": 0.968844323511891,
+    "heliocentric_to_latent_r2_std": 0.012632204919747973,
+    "latent_to_heliocentric_r2_mean": 0.9705599230248354,
+    "latent_to_heliocentric_r2_std": 0.00971210627365203,
+    "model": "reservoir",
+    "seeds": 3,
+    "test_relative_rmse_2pi_mean": 0.07472122080914016,
+    "test_relative_rmse_2pi_std": 0.006410406023321589,
+    "trainable_parameters": 306
+  }
+]
