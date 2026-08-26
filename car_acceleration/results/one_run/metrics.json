@@ -1,0 +1,22 @@
+{
+  "position_rmse": 0.11166556924581528,
+  "latent_to_position_velocity_r2": 0.9995558545445203,
+  "latent_to_position_velocity_r2_per_dimension": [
+    0.9997748843182224,
+    0.9982525798165034
+  ],
+  "position_velocity_to_latent_r2": 0.9995871396465512,
+  "position_velocity_to_latent_r2_per_dimension": [
+    0.9995772767034254,
+    0.9996016381205911
+  ],
+  "seed": 7,
+  "device": "cpu",
+  "trainable_parameters": 461,
+  "reservoir_nodes_each": 150,
+  "reservoir_count": 2,
+  "latent_size": 2,
+  "fixed_acceleration": 0.5,
+  "history_length": 3,
+  "forecast_horizon": 30
+}

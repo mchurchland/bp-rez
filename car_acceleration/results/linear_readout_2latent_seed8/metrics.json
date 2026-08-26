@@ -1,0 +1,39 @@
+{
+  "position_rmse": 0.14170290529727936,
+  "latent_to_position_velocity_r2": 0.998089072759616,
+  "latent_to_position_velocity_r2_per_dimension": [
+    0.9987869124852043,
+    0.9935132852575104
+  ],
+  "position_velocity_to_latent_r2": 0.9986257744583286,
+  "position_velocity_to_latent_r2_per_dimension": [
+    0.9987022552117644,
+    0.9931611953650727
+  ],
+  "latent_covariance": [
+    [
+      0.28776660061191806,
+      0.0002730749608958456
+    ],
+    [
+      0.0002730749608958456,
+      0.004027501182577675
+    ]
+  ],
+  "latent_covariance_off_diagonal": 0.0002730749608958456,
+  "seed": 8,
+  "device": "cpu",
+  "trainable_parameters": 311,
+  "reservoir_nodes_each": 150,
+  "reservoir_count": 1,
+  "latent_size": 1,
+  "fixed_acceleration": 0.5,
+  "positive_readout_weights": true,
+  "readout_weights": [
+    0.5259205102920532,
+    0.15654079616069794
+  ],
+  "covariance_weight": 0.01,
+  "history_length": 3,
+  "forecast_horizon": 30
+}

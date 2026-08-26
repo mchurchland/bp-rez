@@ -1,0 +1,26 @@
+{
+  "position_rmse": 0.06593070924282074,
+  "latent_to_position_velocity_r2": 0.9998873950229009,
+  "latent_to_position_velocity_r2_per_dimension": [
+    0.9999039303219607,
+    0.9997780209430276
+  ],
+  "position_velocity_to_latent_r2": 0.9998840733049801,
+  "position_velocity_to_latent_r2_per_dimension": [
+    0.9999150434912513,
+    0.999841557381745
+  ],
+  "model": "scinet_style",
+  "seed": 8,
+  "device": "cpu",
+  "trainable_parameters": 21411,
+  "reservoir_nodes_each": 0,
+  "reservoir_count": 0,
+  "latent_size": 2,
+  "hidden_size": 100,
+  "beta": 0.0001,
+  "target_latent_std": 0.1,
+  "fixed_acceleration": 0.5,
+  "history_length": 3,
+  "forecast_horizon": 30
+}
