@@ -17,7 +17,11 @@ from .model import CarReservoir
 
 
 POSITION_SCALE = 10.0
-COVARIANCE_WEIGHT = 0.01
+TIME_STEP = 1.0
+COVARIANCE_WEIGHT = 0.1
+LEARNING_RATE = 1e-3
+LR_DECAY_STEP = 5000
+LR_DECAY_FACTOR = 0.1
 
 
 def covariance_penalty(latent: torch.Tensor) -> torch.Tensor:
@@ -110,7 +114,7 @@ def _save_prediction_plot(
 ) -> None:
     count = min(4, len(dataset.history))
     figure, axes = plt.subplots(count, 1, figsize=(9, 2.2 * count), squeeze=False)
-    forecast_times = 0.1 * np.arange(1, dataset.target.shape[1] + 1)
+    forecast_times = TIME_STEP * np.arange(1, dataset.target.shape[1] + 1)
     for row in range(count):
         axis = axes[row, 0]
         axis.plot(forecast_times, dataset.target[row], label="true position", linewidth=2)
@@ -124,7 +128,6 @@ def _save_prediction_plot(
     figure.savefig(path, dpi=160)
     plt.close(figure)
 
-
 def _save_latent_plot(
     dataset: CarDataset,
     initial_latent: np.ndarray,
@@ -132,88 +135,215 @@ def _save_latent_plot(
     path: Path,
 ) -> None:
     last_index = dataset.history.shape[1] - 1
-    state = np.column_stack(
-        (dataset.position[:, last_index], dataset.velocity[:, last_index])
-    )
-    figure, axes = plt.subplots(1, 3, figsize=(15, 4.8))
-    scatter = axes[0].scatter(
+
+    position = dataset.position[:, last_index]
+    velocity = dataset.velocity[:, last_index]
+    acceleration = dataset.acceleration[:, last_index]
+
+    figure = plt.figure(figsize=(20, 5))
+
+    ax_position = figure.add_subplot(1, 4, 1, projection="3d")
+    ax_velocity = figure.add_subplot(1, 4, 2, projection="3d")
+    ax_acceleration = figure.add_subplot(1, 4, 3, projection="3d")
+    ax_trajectory = figure.add_subplot(1, 4, 4, projection="3d")
+
+    # ------------------------------------------------------------
+    # Latent colored by true position
+    # ------------------------------------------------------------
+
+    scatter = ax_position.scatter(
         initial_latent[:, 0],
         initial_latent[:, 1],
-        c=state[:, 0],
+        initial_latent[:, 2],
+        c=position,
         cmap="viridis",
         s=12,
+        alpha=0.8,
     )
-    axes[0].set(
-        title="initial latent colored by position",
+
+    ax_position.set(
+        title="colored by position",
         xlabel="latent 1",
         ylabel="latent 2",
+        zlabel="latent 3",
     )
-    figure.colorbar(scatter, ax=axes[0], label="true position")
-    scatter = axes[1].scatter(
+
+    figure.colorbar(
+        scatter,
+        ax=ax_position,
+        label="true position",
+        shrink=0.7,
+        pad=0.1,
+    )
+
+    # ------------------------------------------------------------
+    # Latent colored by true velocity
+    # ------------------------------------------------------------
+
+    scatter = ax_velocity.scatter(
         initial_latent[:, 0],
         initial_latent[:, 1],
-        c=state[:, 1],
+        initial_latent[:, 2],
+        c=velocity,
         cmap="coolwarm",
         s=12,
+        alpha=0.8,
     )
-    axes[1].set(
-        title="initial latent colored by velocity",
+
+    ax_velocity.set(
+        title="colored by velocity",
         xlabel="latent 1",
         ylabel="latent 2",
+        zlabel="latent 3",
     )
-    figure.colorbar(scatter, ax=axes[1], label="true velocity")
+
+    figure.colorbar(
+        scatter,
+        ax=ax_velocity,
+        label="true velocity",
+        shrink=0.7,
+        pad=0.1,
+    )
+
+    # ------------------------------------------------------------
+    # Latent colored by true acceleration
+    # ------------------------------------------------------------
+
+    scatter = ax_acceleration.scatter(
+        initial_latent[:, 0],
+        initial_latent[:, 1],
+        initial_latent[:, 2],
+        c=acceleration,
+        cmap="plasma",
+        s=12,
+        alpha=0.8,
+    )
+
+    ax_acceleration.set(
+        title="colored by acceleration",
+        xlabel="latent 1",
+        ylabel="latent 2",
+        zlabel="latent 3",
+    )
+
+    figure.colorbar(
+        scatter,
+        ax=ax_acceleration,
+        label="true acceleration",
+        shrink=0.7,
+        pad=0.1,
+    )
+
+    # ------------------------------------------------------------
+    # Example trajectory through latent space
+    # ------------------------------------------------------------
+
     example = future_latent[0]
-    axes[2].plot(example[:, 0], example[:, 1], marker="o", markersize=2)
-    axes[2].scatter(
+
+    ax_trajectory.plot(
+        example[:, 0],
+        example[:, 1],
+        example[:, 2],
+        marker="o",
+        markersize=2,
+    )
+
+    ax_trajectory.scatter(
         example[0, 0],
         example[0, 1],
+        example[0, 2],
         color="green",
+        s=40,
         label="first prediction",
     )
-    axes[2].scatter(
+
+    ax_trajectory.scatter(
         example[-1, 0],
         example[-1, 1],
+        example[-1, 2],
         color="red",
+        s=40,
         label="last prediction",
     )
-    axes[2].set(
+
+    ax_trajectory.set(
         title="one latent trajectory",
         xlabel="latent 1",
         ylabel="latent 2",
+        zlabel="latent 3",
     )
-    axes[2].legend(fontsize=8)
-    for axis in axes:
+
+    ax_trajectory.legend(fontsize=8)
+
+    # ------------------------------------------------------------
+    # Formatting
+    # ------------------------------------------------------------
+
+    for axis in (
+        ax_position,
+        ax_velocity,
+        ax_acceleration,
+        ax_trajectory,
+    ):
         axis.grid(alpha=0.25)
-    figure.suptitle("What information is carried by the 2D latent?")
+
+    figure.suptitle(
+        "What information is carried by the 3D latent?"
+    )
+
     figure.tight_layout()
     figure.savefig(path, dpi=160)
     plt.close(figure)
-
-
 def _save_physics_plot(dataset: CarDataset, path: Path) -> None:
-    times = 0.1 * np.arange(len(dataset.position[0]))
+    dt = TIME_STEP
+    times = dt * np.arange(dataset.position.shape[1])
+
     figure, axes = plt.subplots(3, 1, figsize=(9, 8), sharex=True)
-    for index in range(min(6, len(dataset.position))):
-        axes[0].plot(times, dataset.position[index], alpha=0.75)
-        axes[1].plot(times, dataset.velocity[index], alpha=0.75)
-        axes[2].plot(
+
+    num_to_plot = min(6, len(dataset.position))
+
+    for index in range(num_to_plot):
+        axes[0].plot(
             times,
-            np.full_like(times, dataset.acceleration[index]),
+            dataset.position[index],
             alpha=0.75,
         )
-    axes[0].axvline(0.2, color="black", linestyle="--", label="history ends")
+
+        axes[1].plot(
+            times,
+            dataset.velocity[index],
+            alpha=0.75,
+        )
+
+        axes[2].plot(
+            times,
+            dataset.acceleration[index],
+            alpha=0.75,
+        )
+
+    history_end = dataset.history.shape[1] * dt
+
+    axes[0].axvline(
+        history_end,
+        color="black",
+        linestyle="--",
+        label="history ends",
+    )
+
     axes[0].set_ylabel("position")
     axes[1].set_ylabel("velocity")
-    axes[2].set(xlabel="time", ylabel="acceleration")
+    axes[2].set_ylabel("acceleration")
+    axes[2].set_xlabel("time")
+
     axes[0].set_title("Ground-truth accelerating cars")
     axes[0].legend()
+
     for axis in axes:
         axis.grid(alpha=0.25)
+
     figure.tight_layout()
     figure.savefig(path, dpi=160)
     plt.close(figure)
-
-
 def run_experiment(
     output_dir: str = "car_acceleration/results/linear_readout_2latent_positive_seed8",
     *,
@@ -221,7 +351,7 @@ def run_experiment(
     train_samples: int = 3000,
     validation_samples: int = 500,
     test_samples: int = 500,
-    steps: int = 5000,
+    steps: int = 100,
     batch_size: int = 128,
     covariance_weight: float = COVARIANCE_WEIGHT,
     device_name: str = "auto",
@@ -232,13 +362,23 @@ def run_experiment(
     device = resolve_device(device_name)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    train = generate_car_dataset(train_samples, seed + 1)
-    validation = generate_car_dataset(validation_samples, seed + 2)
-    test = generate_car_dataset(test_samples, seed + 3)
+    train = generate_car_dataset(train_samples, seed + 1, dt=TIME_STEP)
+    validation = generate_car_dataset(validation_samples, seed + 2, dt=TIME_STEP)
+    test = generate_car_dataset(test_samples, seed + 3, dt=TIME_STEP)
     model = CarReservoir(seed=seed).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer,
+        milestones=[LR_DECAY_STEP],
+        gamma=LR_DECAY_FACTOR,
+    )
     rng = np.random.default_rng(seed + 4)
-    history = {"step": [], "train_loss": [], "validation_loss": []}
+    history = {
+        "step": [],
+        "train_loss": [],
+        "validation_loss": [],
+        "learning_rate": [],
+    }
 
     def validation_loss() -> float:
         model.eval()
@@ -262,30 +402,22 @@ def run_experiment(
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
+        scheduler.step()
         if step == 1 or step % 20 == 0 or step == steps:
             history["step"].append(step)
             history["train_loss"].append(float(loss.detach().cpu()))
             history["validation_loss"].append(validation_loss())
+            history["learning_rate"].append(optimizer.param_groups[0]["lr"])
             if step % 100 == 0 or step == steps:
-                print(f"step={step:4d} train={history['train_loss'][-1]:.6g} validation={history['validation_loss'][-1]:.6g}", flush=True)
+                print(
+                    f"step={step:4d} train={history['train_loss'][-1]:.6g} "
+                    f"validation={history['validation_loss'][-1]:.6g} "
+                    f"lr={history['learning_rate'][-1]:.3g}",
+                    flush=True,
+                )
 
     metrics, prediction, future_latent, initial_latent = _evaluate(model, test, device)
-    metrics.update(
-        {
-            "seed": seed,
-            "device": str(device),
-            "trainable_parameters": count_trainable_parameters(model),
-            "reservoir_nodes_each": 150,
-            "reservoir_count": 1,
-            "latent_size": 2,
-            "fixed_acceleration": 0.5,
-            "positive_readout_weights": True,
-            "readout_weights": model.readout_weights.detach().cpu().flatten().tolist(),
-            "covariance_weight": covariance_weight,
-            "history_length": 3,
-            "forecast_horizon": 30,
-        }
-    )
+
     torch.save(model.state_dict(), output / "checkpoint.pt")
     np.savez_compressed(
         output / "predictions.npz",

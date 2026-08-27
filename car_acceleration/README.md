@@ -1,50 +1,188 @@
-# Car acceleration experiment
+# Discovering car dynamics with a reservoir
 
-This is a small teaching experiment separate from the solar-system runs. It
-simulates one-dimensional cars with random initial positions and velocities,
-plus one fixed nonzero acceleration shared by all cars. The model sees only
-three initial positions and predicts the next 30 positions.
+This experiment asks a deliberately small representation-learning question:
 
-This version has one fixed 150-neuron encoder reservoir and a direct linear
-readout from a 2D latent. The two latent-to-position weights are constrained to
-be strictly positive, and a covariance penalty discourages the two latent
-coordinates from moving together:
+> Can a model infer position, velocity, and a car-specific constant
+> acceleration when it observes only a short sequence of positions?
 
-```text
-three positions -> fixed reservoir (150) -> learned 2D latent z
-                 -> learned affine latent dynamics
-                 -> positive-weight linear position readout
-```
+Every trajectory has independently sampled initial conditions and acceleration.
+The model receives no velocity or acceleration input. It must compress five
+observed positions into a three-dimensional latent state and use that state to
+predict the next 30 positions.
 
-The default covariance penalty weight is `0.01`. It encourages uncorrelated
-latent coordinates but does not by itself guarantee that latent 1 is position
-and latent 2 is velocity.
+## Problem setup
 
-The latent transition is learned as
+For each car,
 
 ```text
-z[t+1] = A z[t] + b
+initial position  x0 ~ Uniform(-5, 5)
+initial velocity  v0 ~ Uniform(-2, 2)
+acceleration       a ~ Uniform(-1, 1)
+time step         dt = 1
 ```
 
-Because acceleration is fixed globally, the latent only needs to retain the
-changing position and velocity. The acceleration contribution can be stored in
-the shared transition bias.
+Acceleration is constant within a trajectory but differs between cars. The
+dynamics are therefore
 
-Run one experiment from the repository root:
+```text
+x[t+1] = x[t] + v[t] dt + 0.5 a dt^2
+v[t+1] = v[t] + a dt
+a[t+1] = a[t]
+```
+
+The default dataset contains five observed positions at times `0,...,4` and 30
+forecast targets at times `5,...,34`. Because each car has its own unknown
+acceleration, the minimal physical state has three degrees of freedom:
+`(position, velocity, acceleration)`.
+
+## Model
+
+```text
+five positions
+      |
+      v
+fixed 150-node reservoir
+      |
+      v
+learned 3D latent z[0]
+      |
+      |  z[t+1] = A z[t] + b
+      v
+30-step latent rollout
+      |
+      v
+positive linear position readout
+```
+
+The position history is divided by `10` before entering the reservoir. The
+reservoir is fixed after deterministic random initialization; only the encoder,
+latent transition, and final readout are trained.
+
+| Component | Default |
+| --- | ---: |
+| Reservoir nodes | 150 |
+| Spectral radius | 0.99 |
+| Recurrent density | 0.10 |
+| Leak rate | 0.80 |
+| Input projection scale | 1.50 |
+| Latent dimensions | 3 |
+| History length | 5 |
+| Forecast horizon | 30 |
+| Time step | 1.0 |
+
+The latent-to-position weights are constrained to be positive with a softplus
+parameterization. The latent transition and its bias are unconstrained and
+learned end to end.
+
+## Training
+
+Training minimizes normalized future-position error plus an off-diagonal
+covariance penalty on the initial latent:
+
+```text
+loss = position_mse + lambda_cov * sum(offdiag(Cov(z[0]))^2)
+```
+
+The command-line defaults are:
+
+| Setting | Value |
+| --- | ---: |
+| Training trajectories | 3,000 |
+| Validation trajectories | 500 |
+| Test trajectories | 500 |
+| Batch size | 128 |
+| Optimizer | Adam |
+| Optimizer steps | 10,000 |
+| Initial learning rate | 1e-3 |
+| Learning rate after step 5,000 | 1e-4 |
+| Covariance weight | 0.5 |
+| Gradient-norm limit | 1.0 |
+
+Training, validation, and test sets are generated independently from adjacent
+seeds. Mini-batches sample training trajectories with replacement.
+
+## Running the experiment
+
+From the repository root:
 
 ```bash
+pip install -r requirements.txt
 python -m car_acceleration.run_experiment
 ```
 
-Results are written to `car_acceleration/results/linear_readout_2latent/`:
+Useful overrides:
 
-- `ground_truth_dynamics.png`: simulated position, velocity, and acceleration;
-- `predictions.png`: held-out future-position predictions;
-- `latent_dynamics.png`: 2D latent/state relationships and one latent trajectory;
-- `training.png`: training and validation loss;
-- `metrics.json`, `predictions.npz`, and `checkpoint.pt`: numeric results.
+```bash
+python -m car_acceleration.run_experiment \
+  --seed 8 \
+  --steps 10000 \
+  --covariance-weight 0.5 \
+  --device cpu \
+  --output-dir car_acceleration/results/car_dt1_seed8
+```
 
-The latent plots are diagnostics, not proof that latent 1 is position and
-latent 2 is velocity. A latent can rotate or mix those physical quantities and
-still represent the same state. The reported linear-probe R² values test how
-well position and velocity can be recovered from the learned latent.
+`--device auto` selects CUDA when available and otherwise uses the CPU.
+
+## Outputs
+
+Each run writes the following files to its output directory:
+
+| File | Contents |
+| --- | --- |
+| `checkpoint.pt` | Model parameters and fixed reservoir matrices |
+| `history.json` | Step, training loss, validation loss, and learning rate |
+| `metrics.json` | Position RMSE, latent probes, and latent covariance |
+| `predictions.npz` | Numeric inputs, outputs, states, and latents |
+| `training.png` | Training and validation curves |
+| `predictions.png` | Example held-out position forecasts |
+| `ground_truth_dynamics.png` | Physical position, velocity, and acceleration |
+| `latent_dynamics.png` | Physical coloring of the latent and one rollout |
+
+The default output-directory name still contains `2latent` for historical
+reasons; the current model uses a three-dimensional latent.
+
+## Interpreting the latent space
+
+The three latent coordinates are not required to become position, velocity,
+and acceleration individually. Any invertible rotation or linear mixing can
+represent the same three-dimensional state. Smooth color structure and linear
+probe R² are therefore more informative than assigning a physical name to a
+single axis.
+
+Covariance also requires care. At the end of the observed history,
+
+```text
+v(4) = v0 + 4a
+x(4) = x0 + 4v0 + 8a
+```
+
+so current position, velocity, and acceleration are naturally correlated even
+though `x0`, `v0`, and `a` were sampled independently. A physically meaningful
+latent may consequently contain correlated coordinates. The implemented
+regularizer penalizes raw covariance—not correlation or statistical
+dependence—and a larger weight does not guarantee coordinate-wise physical
+disentanglement.
+
+Most importantly, acceleration is never injected into the encoder. It appears
+only as the curvature of the observed position sequence. Velocity and
+acceleration are retained in the dataset solely for diagnostics and plotting.
+
+## Current caveats
+
+- With `dt=1` and a 30-step horizon, the model forecasts 30 physical time
+  units. Quadratic position growth makes this substantially harder than the
+  earlier `dt=0.1` task and can make the fixed position scale of `10` too small.
+- The saved checkpoint is the final training state, not necessarily the state
+  with the lowest validation loss.
+- The covariance penalty is evaluated on mini-batches and only on the initial
+  latent, not on every future latent state.
+- The direct Python function has research-oriented defaults that differ from
+  the command-line runner; use the module command above for the documented
+  10,000-step configuration.
+
+## Source map
+
+- [`data.py`](data.py): trajectory generation and train/target construction
+- [`model.py`](model.py): fixed reservoir, latent encoder, dynamics, and readout
+- [`experiment.py`](experiment.py): optimization, evaluation, and figures
+- [`run_experiment.py`](run_experiment.py): command-line entry point

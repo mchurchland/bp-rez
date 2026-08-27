@@ -15,8 +15,8 @@ def main() -> None:
         default="car_acceleration/results/linear_readout_2latent_positive_seed8",
     )
     parser.add_argument("--seed", type=int, default=7)
-    parser.add_argument("--steps", type=int, default=5000)
-    parser.add_argument("--covariance-weight", type=float, default=0.01)
+    parser.add_argument("--steps", type=int, default=10000)
+    parser.add_argument("--covariance-weight", type=float, default=0.5)
     parser.add_argument("--device", default="auto", help="auto, cpu, or cuda")
     args = parser.parse_args()
     run_experiment(

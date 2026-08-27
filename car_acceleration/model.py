@@ -22,15 +22,15 @@ class CarReservoir(nn.Module):
         self,
         *,
         nodes: int = 150,
-        latent_size: int = 2,
-        spectral_radius: float = 0.9,
+        latent_size: int = 3,
+        spectral_radius: float = 0.99,
         density: float = 0.1,
         leak_rate: float = 0.8,
         seed: int = 0,
     ) -> None:
         super().__init__()
-        if nodes != 150:
-            raise ValueError("this experiment is intentionally fixed at 150 nodes")
+        #if nodes != 150:
+        #    raise ValueError("this experiment is intentionally fixed at 150 nodes")
         #if latent_size != 2:
         #    raise ValueError("this experiment is intentionally fixed at a 2D latent")
         generator = torch.Generator(device="cpu").manual_seed(seed)
