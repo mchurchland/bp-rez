@@ -20,7 +20,7 @@ POSITION_SCALE = 10.0
 TIME_STEP = 1.0
 COVARIANCE_WEIGHT = 0.1
 LEARNING_RATE = 1e-3
-LR_DECAY_STEP = 5000
+LR_DECAY_STEPS = (5000, 40000)
 LR_DECAY_FACTOR = 0.1
 
 
@@ -369,7 +369,7 @@ def run_experiment(
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer,
-        milestones=[LR_DECAY_STEP],
+        milestones=LR_DECAY_STEPS,
         gamma=LR_DECAY_FACTOR,
     )
     rng = np.random.default_rng(seed + 4)

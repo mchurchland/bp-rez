@@ -1,14 +1,20 @@
 # Backpropagation through fixed reservoirs
 
-Research code for learning compact intermediate representations between fixed
-recurrent reservoirs. The repository has two deliberately separate experiment
-packages:
+Research code for learning compact intermediate representations and autonomous
+latent dynamics from fixed recurrent reservoirs. The main experiment packages
+are:
 
 - [`narma/`](narma/README.md): the publication-oriented NARMA benchmark,
   including ridge baselines, learned bottlenecks, paired statistics and Slurm
   arrays.
 - [`solar/`](solar/README.md): the Copernicus/SciNet physical-representation
   experiment and its analysis jobs.
+- [`car_acceleration/`](car_acceleration/README.md): car acceleration and
+  rabbit–wolf systems with fixed temporal reservoir encoders and autonomous
+  learned latent dynamics.
+
+The research question, exact handoff commands, current evidence, and known
+failures are consolidated in [`PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md).
 
 Generic matrix-construction and deterministic runtime helpers live in
 [`common/`](common/). The cross-domain publication plan remains in
@@ -81,6 +87,11 @@ solar/
 ├── analysis/
 ├── jobs/
 └── results/            archived solar/SciNet results
+car_acceleration/
+├── data.py             car and Lotka–Volterra trajectory generators
+├── model.py            fixed-reservoir car encoder and affine latent dynamics
+├── rabbit_model.py     tapped reservoir and quadratic latent dynamics
+└── results/            exploratory physical-latent runs
 ```
 
 Generated publication-benchmark shards are ignored by Git by default. Keep

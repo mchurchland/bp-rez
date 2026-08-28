@@ -1,5 +1,8 @@
 # Discovering car dynamics with a reservoir
 
+The rabbit-only Lotka-Volterra counterpart is documented in
+[`RABBIT_README.md`](RABBIT_README.md).
+
 This experiment asks a deliberately small representation-learning question:
 
 > Can a model infer position, velocity, and a car-specific constant
@@ -92,9 +95,10 @@ The command-line defaults are:
 | Test trajectories | 500 |
 | Batch size | 128 |
 | Optimizer | Adam |
-| Optimizer steps | 10,000 |
+| Optimizer steps | 100,000 |
 | Initial learning rate | 1e-3 |
 | Learning rate after step 5,000 | 1e-4 |
+| Learning rate after step 40,000 | 1e-5 |
 | Covariance weight | 0.5 |
 | Gradient-norm limit | 1.0 |
 
@@ -122,6 +126,37 @@ python -m car_acceleration.run_experiment \
 ```
 
 `--device auto` selects CUDA when available and otherwise uses the CPU.
+
+### Correlation-based latent ordering
+
+After a run, compare the physical and latent correlation matrices and find the
+best one-to-one latent-axis ordering with:
+
+```bash
+python -m car_acceleration.analyze_latent_correlations \
+  --predictions car_acceleration/results/car_dt1_seed8/predictions.npz \
+  --dt 1
+```
+
+The script tests all six permutations of `(z1, z2, z3)` and selects the one
+whose pairwise correlation pattern most closely matches `(position, velocity,
+acceleration)`. It also loads the neighboring `checkpoint.pt` and reports the
+latent transition matrix, transition bias, eigenvalues, and the correctly
+permuted recurrence. Add `--output-json path/to/analysis.json` to save every
+matrix and comparison value. Use `--checkpoint path/to/checkpoint.pt` when the
+checkpoint is not beside the predictions file.
+
+To print the final recurrence stored in a checkpoint and its fitted physical
+coordinate transform, `A_physicalized = W A W^-1`:
+
+```bash
+python -m car_acceleration.print_latent_recurrence \
+  --checkpoint car_acceleration/results/car_dt1_seed8/checkpoint.pt
+```
+
+The script fits `physical = W z + c` from the `predictions.npz` beside the
+checkpoint, using physical order `(position, velocity, acceleration)`. Pass
+`--predictions path/to/predictions.npz` to use a different file.
 
 ## Outputs
 
@@ -186,3 +221,6 @@ acceleration are retained in the dataset solely for diagnostics and plotting.
 - [`model.py`](model.py): fixed reservoir, latent encoder, dynamics, and readout
 - [`experiment.py`](experiment.py): optimization, evaluation, and figures
 - [`run_experiment.py`](run_experiment.py): command-line entry point
+- [`analyze_latent_correlations.py`](analyze_latent_correlations.py):
+  latent-axis alignment
+- [`print_latent_recurrence.py`](print_latent_recurrence.py): final recurrence
