@@ -1,0 +1,24 @@
+{
+  "position_rmse": 3.156590461730957,
+  "latent_to_position_velocity_r2": 0.9819182778066748,
+  "latent_to_position_velocity_r2_per_dimension": [
+    0.9820447482773088,
+    0.9786200553989672
+  ],
+  "position_velocity_to_latent_r2": 0.9755025779815372,
+  "position_velocity_to_latent_r2_per_dimension": [
+    0.9648327785154767,
+    0.97686887033852
+  ],
+  "latent_covariance": [
+    [
+      0.055837281268935245,
+      -0.012356328757517585
+    ],
+    [
+      -0.012356328757517585,
+      0.43605086937175497
+    ]
+  ],
+  "latent_covariance_off_diagonal": -0.012356328757517585
+}

@@ -115,10 +115,28 @@ def load_latent_recurrence(
 def matrix_text(matrix: np.ndarray, labels: tuple[str, ...]) -> str:
     """Format a small labeled matrix for terminal output."""
 
-    width = max(10, max(len(label) for label in labels) + 1)
-    header = " " * width + "".join(f"{label:>{width}}" for label in labels)
+    return rectangular_matrix_text(matrix, labels, labels)
+
+
+def rectangular_matrix_text(
+    matrix: np.ndarray,
+    row_labels: tuple[str, ...],
+    column_labels: tuple[str, ...],
+) -> str:
+    """Format a labeled rectangular matrix for terminal output."""
+
+    if matrix.shape != (len(row_labels), len(column_labels)):
+        raise ValueError("matrix shape does not match its row and column labels")
+    width = max(
+        10,
+        max(len(label) for label in row_labels) + 1,
+        max(len(label) for label in column_labels) + 1,
+    )
+    header = " " * width + "".join(
+        f"{label:>{width}}" for label in column_labels
+    )
     rows = [header]
-    for label, row in zip(labels, matrix, strict=True):
+    for label, row in zip(row_labels, matrix, strict=True):
         values = "".join(f"{value:>{width}.4f}" for value in row)
         rows.append(f"{label:<{width}}{values}")
     return "\n".join(rows)
@@ -129,7 +147,7 @@ def analyze(
     dt: float,
     checkpoint_path: Path | None = None,
 ) -> dict[str, object]:
-    """Compute correlations and the best structural latent-axis alignment."""
+    """Compute correlations and, for a 3D latent, its physical-axis alignment."""
 
     if dt <= 0.0:
         raise ValueError("dt must be positive")
@@ -146,13 +164,8 @@ def analyze(
         latent = data["initial_latent"].astype(np.float64)
         acceleration = infer_acceleration(data, dt)
 
-    if latent.shape[1] != len(PHYSICAL_LABELS):
-        raise ValueError(
-            "this alignment requires exactly three latent coordinates "
-            "for position, velocity, and acceleration"
-        )
-
     last_observed = history.shape[1] - 1
+    end_physical_labels = (f"x{last_observed}", f"v{last_observed}", "a")
     initial_physics = np.column_stack(
         (position[:, 0], velocity[:, 0], acceleration)
     )
@@ -164,42 +177,54 @@ def analyze(
     end_physics_correlation = correlation_matrix(end_physics)
     history_correlation = correlation_matrix(history)
     latent_correlation = correlation_matrix(latent)
-    order, alignment_rmse, reordered_latent_correlation = best_latent_order(
-        end_physics_correlation,
-        latent_correlation,
-    )
+    end_physics_latent_correlation = np.corrcoef(
+        end_physics, latent, rowvar=False
+    )[: len(PHYSICAL_LABELS), len(PHYSICAL_LABELS) :]
 
     latent_labels = tuple(f"z{index + 1}" for index in range(latent.shape[1]))
-    ordered_latent_labels = tuple(latent_labels[index] for index in order)
-    mapping = {
-        physical: latent_label
-        for physical, latent_label in zip(
-            PHYSICAL_LABELS,
-            ordered_latent_labels,
-            strict=True,
+    alignment_available = latent.shape[1] == len(PHYSICAL_LABELS)
+    if alignment_available:
+        order, alignment_rmse, reordered_latent_correlation = best_latent_order(
+            end_physics_correlation,
+            latent_correlation,
         )
-    }
-
-    physical_pairs = upper_triangle(end_physics_correlation)
-    latent_pairs = upper_triangle(reordered_latent_correlation)
-    pair_names = (
-        "position_velocity",
-        "position_acceleration",
-        "velocity_acceleration",
-    )
-    pairwise_comparison = {
-        name: {
-            "physical": float(physical_value),
-            "latent": float(latent_value),
-            "absolute_difference": float(abs(physical_value - latent_value)),
+        ordered_latent_labels = tuple(latent_labels[index] for index in order)
+        mapping: dict[str, str] | None = {
+            physical: latent_label
+            for physical, latent_label in zip(
+                PHYSICAL_LABELS,
+                ordered_latent_labels,
+                strict=True,
+            )
         }
-        for name, physical_value, latent_value in zip(
-            pair_names,
-            physical_pairs,
-            latent_pairs,
-            strict=True,
+
+        physical_pairs = upper_triangle(end_physics_correlation)
+        latent_pairs = upper_triangle(reordered_latent_correlation)
+        pair_names = (
+            "position_velocity",
+            "position_acceleration",
+            "velocity_acceleration",
         )
-    }
+        pairwise_comparison: dict[str, dict[str, float]] | None = {
+            name: {
+                "physical": float(physical_value),
+                "latent": float(latent_value),
+                "absolute_difference": float(abs(physical_value - latent_value)),
+            }
+            for name, physical_value, latent_value in zip(
+                pair_names,
+                physical_pairs,
+                latent_pairs,
+                strict=True,
+            )
+        }
+    else:
+        order = tuple(range(latent.shape[1]))
+        alignment_rmse = None
+        reordered_latent_correlation = latent_correlation
+        ordered_latent_labels = latent_labels
+        mapping = None
+        pairwise_comparison = None
 
     if checkpoint_path is None:
         candidate = predictions_path.with_name("checkpoint.pt")
@@ -214,6 +239,9 @@ def analyze(
         "predictions_path": str(predictions_path),
         "dt": dt,
         "samples": len(history),
+        "latent_size": latent.shape[1],
+        "end_physical_labels": list(end_physical_labels),
+        "alignment_available": alignment_available,
         "mapping": mapping,
         "latent_order_zero_based": list(order),
         "latent_order": list(ordered_latent_labels),
@@ -221,6 +249,7 @@ def analyze(
         "pairwise_comparison": pairwise_comparison,
         "initial_physics_correlation": initial_physics_correlation.tolist(),
         "end_physics_correlation": end_physics_correlation.tolist(),
+        "end_physics_latent_correlation": end_physics_latent_correlation.tolist(),
         "history_correlation": history_correlation.tolist(),
         "latent_correlation": latent_correlation.tolist(),
         "reordered_latent_correlation": reordered_latent_correlation.tolist(),
@@ -236,24 +265,43 @@ def print_analysis(analysis: dict[str, object]) -> None:
     reordered = np.asarray(analysis["reordered_latent_correlation"])
     latent_labels = tuple(f"z{index + 1}" for index in range(len(latent)))
     ordered_labels = tuple(analysis["latent_order"])
+    end_physical_labels = tuple(analysis["end_physical_labels"])
+    end_physics_latent = np.asarray(analysis["end_physics_latent_correlation"])
 
     print("Physical correlation at the end of the observed history")
     print(matrix_text(physical, PHYSICAL_LABELS))
+    print(
+        "\nCorrelation of actual "
+        f"({', '.join(end_physical_labels)}) with the initial reservoir latent"
+    )
+    print(
+        rectangular_matrix_text(
+            end_physics_latent,
+            end_physical_labels,
+            latent_labels,
+        )
+    )
     print("\nOriginal latent correlation")
     print(matrix_text(latent, latent_labels))
-    print("\nBest latent order for (position, velocity, acceleration)")
-    print("  " + " -> ".join(ordered_labels))
-    for physical_name, latent_name in analysis["mapping"].items():
-        print(f"  {physical_name:>12} <- {latent_name}")
-    print(f"\nCorrelation-pattern RMSE: {analysis['alignment_rmse']:.6f}")
-    print("\nReordered latent correlation")
-    print(matrix_text(reordered, ordered_labels))
-    print("\nPairwise comparison")
-    for name, comparison in analysis["pairwise_comparison"].items():
+    if analysis["alignment_available"]:
+        print("\nBest latent order for (position, velocity, acceleration)")
+        print("  " + " -> ".join(ordered_labels))
+        for physical_name, latent_name in analysis["mapping"].items():
+            print(f"  {physical_name:>12} <- {latent_name}")
+        print(f"\nCorrelation-pattern RMSE: {analysis['alignment_rmse']:.6f}")
+        print("\nReordered latent correlation")
+        print(matrix_text(reordered, ordered_labels))
+        print("\nPairwise comparison")
+        for name, comparison in analysis["pairwise_comparison"].items():
+            print(
+                f"  {name:<25} physical={comparison['physical']:.4f} "
+                f"latent={comparison['latent']:.4f} "
+                f"difference={comparison['absolute_difference']:.4f}"
+            )
+    else:
         print(
-            f"  {name:<25} physical={comparison['physical']:.4f} "
-            f"latent={comparison['latent']:.4f} "
-            f"difference={comparison['absolute_difference']:.4f}"
+            "\nPhysical-axis permutation skipped: it requires a 3D latent "
+            f"but this run has {analysis['latent_size']} dimensions."
         )
 
     recurrence = analysis["latent_recurrence"]
@@ -266,11 +314,12 @@ def print_analysis(analysis: dict[str, object]) -> None:
         print("  z[t+1] = A @ z[t] + b")
         print(matrix_text(transition, latent_labels))
         print("  b = " + np.array2string(bias, precision=6))
-        print("\nLatent recurrence in physical-aligned order")
-        print("  state order: " + ", ".join(PHYSICAL_LABELS))
-        print("  latent order: " + ", ".join(ordered_labels))
-        print(matrix_text(reordered_transition, ordered_labels))
-        print("  b = " + np.array2string(reordered_bias, precision=6))
+        if analysis["alignment_available"]:
+            print("\nLatent recurrence in physical-aligned order")
+            print("  state order: " + ", ".join(PHYSICAL_LABELS))
+            print("  latent order: " + ", ".join(ordered_labels))
+            print(matrix_text(reordered_transition, ordered_labels))
+            print("  b = " + np.array2string(reordered_bias, precision=6))
         eigenvalue_text = ", ".join(
             (
                 f"{value['real']:.6f}{value['imaginary']:+.6f}j"

@@ -8,6 +8,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from PIL import Image
 
 from common.reservoir import count_trainable_parameters
 from common.runtime import resolve_device, seed_everything
@@ -18,7 +19,8 @@ from .model import CarReservoir
 
 POSITION_SCALE = 10.0
 TIME_STEP = 1.0
-COVARIANCE_WEIGHT = 0.1
+COVARIANCE_WEIGHT = 0.0
+CORRELATION_WEIGHT = 1.0
 LEARNING_RATE = 1e-3
 LR_DECAY_STEPS = (5000, 40000)
 LR_DECAY_FACTOR = 0.1
@@ -27,11 +29,24 @@ LR_DECAY_FACTOR = 0.1
 def covariance_penalty(latent: torch.Tensor) -> torch.Tensor:
     """Penalize covariance between latent coordinates across a batch."""
 
-    #if latent.ndim != 2 or latent.shape[1] < 2:
-    #    raise ValueError("latent must have shape [batch, latent_size >= 2]")
+    if latent.ndim != 2 or latent.shape[1] < 2:
+        raise ValueError("latent must have shape [batch, latent_size >= 2]")
     centered = latent - latent.mean(dim=0, keepdim=True)
     covariance = centered.T @ centered / max(len(latent) - 1, 1)
     off_diagonal = covariance - torch.diag(torch.diag(covariance))
+    return off_diagonal.square().sum()
+
+
+def correlation_penalty(latent: torch.Tensor) -> torch.Tensor:
+    """Penalize off-diagonal correlations between latent coordinates."""
+
+    if latent.ndim != 2 or latent.shape[1] < 2:
+        raise ValueError("latent must have shape [batch, latent_size >= 2]")
+    centered = latent - latent.mean(dim=0, keepdim=True)
+    standard_deviation = centered.square().mean(dim=0).sqrt().clamp_min(1e-6)
+    normalized = centered / standard_deviation
+    correlation = normalized.T @ normalized / max(len(latent), 1)
+    off_diagonal = correlation - torch.diag(torch.diag(correlation))
     return off_diagonal.square().sum()
 
 
@@ -128,172 +143,216 @@ def _save_prediction_plot(
     figure.savefig(path, dpi=160)
     plt.close(figure)
 
+def _save_latent_animation(
+    dataset: CarDataset,
+    initial_latent: np.ndarray,
+    future_latent: np.ndarray,
+    path: Path,
+) -> None:
+    """Save a frame-by-frame 2D latent animation as a GIF."""
+
+    if initial_latent.ndim != 2 or initial_latent.shape[1] != 2:
+        raise ValueError(
+            "the 2D latent plot expects initial_latent with shape [samples, 2]"
+        )
+    if future_latent.ndim != 3 or future_latent.shape[2] != 2:
+        raise ValueError(
+            "the 2D latent plot expects future_latent with shape [samples, steps, 2]"
+        )
+    if path.suffix.lower() != ".gif":
+        raise ValueError("the latent animation output must have a .gif suffix")
+
+    last_index = dataset.history.shape[1] - 1
+
+    latent_states = np.concatenate(
+        (initial_latent[:, None, :], future_latent), axis=1
+    )
+    frame_count = latent_states.shape[1]
+    if last_index + frame_count > dataset.position.shape[1]:
+        raise ValueError("latent frames extend beyond the physical-state arrays")
+
+    physical_indices = last_index + np.arange(frame_count)
+    physical_values = (
+        dataset.position[:, physical_indices].T,
+        dataset.velocity[:, physical_indices].T,
+        dataset.acceleration[:, physical_indices].T,
+    )
+    colors = ("viridis", "coolwarm", "plasma")
+    labels = ("true position", "true velocity", "true acceleration")
+    titles = (
+        "latent colored by position",
+        "latent colored by velocity",
+        "latent colored by acceleration",
+    )
+
+    all_latents = latent_states.reshape(-1, 2)
+    lower = all_latents.min(axis=0)
+    upper = all_latents.max(axis=0)
+    margin = np.maximum((upper - lower) * 0.06, 0.05)
+    limits = tuple(
+        (lower[axis] - margin[axis], upper[axis] + margin[axis])
+        for axis in range(2)
+    )
+
+    def color_limits(values: np.ndarray) -> tuple[float, float]:
+        low = float(values.min())
+        high = float(values.max())
+        if low == high:
+            padding = max(abs(low) * 0.05, 0.05)
+            return low - padding, high + padding
+        return low, high
+
+    figure, axes = plt.subplots(2, 2, figsize=(11, 8), squeeze=False)
+    diagnostic_axes = (axes[0, 0], axes[0, 1], axes[1, 0])
+    scatters = []
+    for axis, values, cmap, label, title in zip(
+        diagnostic_axes, physical_values, colors, labels, titles, strict=True
+    ):
+        low, high = color_limits(values)
+        scatter = axis.scatter(
+            latent_states[:, 0, 0],
+            latent_states[:, 0, 1],
+            c=values[0],
+            cmap=cmap,
+            vmin=low,
+            vmax=high,
+            s=16,
+            alpha=0.8,
+            edgecolors="none",
+        )
+        scatters.append(scatter)
+        axis.set(
+            title=title,
+            xlabel="latent 1",
+            ylabel="latent 2",
+            xlim=limits[0],
+            ylim=limits[1],
+        )
+        axis.grid(alpha=0.25)
+        figure.colorbar(scatter, ax=axis, label=label)
+
+    ax_trajectory = axes[1, 1]
+    ax_trajectory.set(
+        title="one latent trajectory",
+        xlabel="latent 1",
+        ylabel="latent 2",
+        xlim=limits[0],
+        ylim=limits[1],
+    )
+    ax_trajectory.grid(alpha=0.25)
+    trajectory_line, = ax_trajectory.plot(
+        [], [], color="0.35", linewidth=1.2, marker="o", markersize=2
+    )
+    initial_marker = ax_trajectory.scatter(
+        [], [], color="black", s=40, label="initial latent", zorder=3
+    )
+    first_marker = ax_trajectory.scatter(
+        [], [], color="green", s=40, label="first prediction", zorder=3
+    )
+    current_marker = ax_trajectory.scatter(
+        [], [], color="red", s=40, label="current latent", zorder=3
+    )
+    ax_trajectory.legend(fontsize=8)
+
+    frames = []
+    for frame, physical_index in enumerate(physical_indices):
+        current_latent = latent_states[:, frame]
+        for scatter, values in zip(scatters, physical_values, strict=True):
+            scatter.set_offsets(current_latent)
+            scatter.set_array(values[frame])
+
+        example = latent_states[0, : frame + 1]
+        trajectory_line.set_data(example[:, 0], example[:, 1])
+        initial_marker.set_offsets(latent_states[0, 0])
+        current_marker.set_offsets(latent_states[0, frame])
+        first_marker.set_offsets(
+            latent_states[0, 1] if frame >= 1 else np.array([np.nan, np.nan])
+        )
+        first_marker.set_visible(frame >= 1)
+        current_marker.set_visible(frame >= 1)
+        phase = "last observed" if frame == 0 else "forecast"
+        figure.suptitle(f"2D latent dynamics — t={physical_index} ({phase})")
+        figure.tight_layout(rect=(0, 0, 1, 0.95))
+        figure.canvas.draw()
+        frame_rgb = np.asarray(figure.canvas.buffer_rgba())[..., :3].copy()
+        frames.append(Image.fromarray(frame_rgb))
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frames[0].save(
+        path,
+        save_all=True,
+        append_images=frames[1:],
+        duration=140,
+        loop=0,
+        disposal=2,
+        optimize=False,
+    )
+    plt.close(figure)
+
+
 def _save_latent_plot(
     dataset: CarDataset,
     initial_latent: np.ndarray,
     future_latent: np.ndarray,
     path: Path,
 ) -> None:
+    """Save the static 2D latent snapshot at the end of the history."""
+
     last_index = dataset.history.shape[1] - 1
-
-    position = dataset.position[:, last_index]
-    velocity = dataset.velocity[:, last_index]
-    acceleration = dataset.acceleration[:, last_index]
-
-    figure = plt.figure(figsize=(20, 5))
-
-    ax_position = figure.add_subplot(1, 4, 1, projection="3d")
-    ax_velocity = figure.add_subplot(1, 4, 2, projection="3d")
-    ax_acceleration = figure.add_subplot(1, 4, 3, projection="3d")
-    ax_trajectory = figure.add_subplot(1, 4, 4, projection="3d")
-
-    # ------------------------------------------------------------
-    # Latent colored by true position
-    # ------------------------------------------------------------
-
-    scatter = ax_position.scatter(
-        initial_latent[:, 0],
-        initial_latent[:, 1],
-        initial_latent[:, 2],
-        c=position,
-        cmap="viridis",
-        s=12,
-        alpha=0.8,
+    diagnostics = (
+        (dataset.position[:, last_index], "viridis", "true position", "latent colored by position"),
+        (dataset.velocity[:, last_index], "coolwarm", "true velocity", "latent colored by velocity"),
+        (dataset.acceleration[:, last_index], "plasma", "true acceleration", "latent colored by acceleration"),
     )
-
-    ax_position.set(
-        title="colored by position",
-        xlabel="latent 1",
-        ylabel="latent 2",
-        zlabel="latent 3",
-    )
-
-    figure.colorbar(
-        scatter,
-        ax=ax_position,
-        label="true position",
-        shrink=0.7,
-        pad=0.1,
-    )
-
-    # ------------------------------------------------------------
-    # Latent colored by true velocity
-    # ------------------------------------------------------------
-
-    scatter = ax_velocity.scatter(
-        initial_latent[:, 0],
-        initial_latent[:, 1],
-        initial_latent[:, 2],
-        c=velocity,
-        cmap="coolwarm",
-        s=12,
-        alpha=0.8,
-    )
-
-    ax_velocity.set(
-        title="colored by velocity",
-        xlabel="latent 1",
-        ylabel="latent 2",
-        zlabel="latent 3",
-    )
-
-    figure.colorbar(
-        scatter,
-        ax=ax_velocity,
-        label="true velocity",
-        shrink=0.7,
-        pad=0.1,
-    )
-
-    # ------------------------------------------------------------
-    # Latent colored by true acceleration
-    # ------------------------------------------------------------
-
-    scatter = ax_acceleration.scatter(
-        initial_latent[:, 0],
-        initial_latent[:, 1],
-        initial_latent[:, 2],
-        c=acceleration,
-        cmap="plasma",
-        s=12,
-        alpha=0.8,
-    )
-
-    ax_acceleration.set(
-        title="colored by acceleration",
-        xlabel="latent 1",
-        ylabel="latent 2",
-        zlabel="latent 3",
-    )
-
-    figure.colorbar(
-        scatter,
-        ax=ax_acceleration,
-        label="true acceleration",
-        shrink=0.7,
-        pad=0.1,
-    )
-
-    # ------------------------------------------------------------
-    # Example trajectory through latent space
-    # ------------------------------------------------------------
+    figure, axes = plt.subplots(2, 2, figsize=(12, 9), squeeze=False)
+    for axis, (values, cmap, colorbar_label, title) in zip(
+        (axes[0, 0], axes[0, 1], axes[1, 0]), diagnostics, strict=True
+    ):
+        scatter = axis.scatter(
+            initial_latent[:, 0],
+            initial_latent[:, 1],
+            c=values,
+            cmap=cmap,
+            s=16,
+            alpha=0.8,
+            edgecolors="none",
+        )
+        axis.set(title=title, xlabel="latent 1", ylabel="latent 2")
+        axis.grid(alpha=0.25)
+        figure.colorbar(scatter, ax=axis, label=colorbar_label)
 
     example = future_latent[0]
-
-    ax_trajectory.plot(
-        example[:, 0],
-        example[:, 1],
-        example[:, 2],
+    axis = axes[1, 1]
+    axis.plot(
+        np.r_[initial_latent[0, 0], example[:, 0]],
+        np.r_[initial_latent[0, 1], example[:, 1]],
+        color="0.35",
+        linewidth=1.2,
         marker="o",
         markersize=2,
     )
-
-    ax_trajectory.scatter(
-        example[0, 0],
-        example[0, 1],
-        example[0, 2],
-        color="green",
-        s=40,
-        label="first prediction",
+    axis.scatter(
+        initial_latent[0, 0], initial_latent[0, 1],
+        color="black", s=40, label="initial latent", zorder=3,
     )
-
-    ax_trajectory.scatter(
-        example[-1, 0],
-        example[-1, 1],
-        example[-1, 2],
-        color="red",
-        s=40,
-        label="last prediction",
+    axis.scatter(
+        example[0, 0], example[0, 1],
+        color="green", s=40, label="first prediction", zorder=3,
     )
-
-    ax_trajectory.set(
-        title="one latent trajectory",
-        xlabel="latent 1",
-        ylabel="latent 2",
-        zlabel="latent 3",
+    axis.scatter(
+        example[-1, 0], example[-1, 1],
+        color="red", s=40, label="last prediction", zorder=3,
     )
+    axis.set(title="one latent trajectory", xlabel="latent 1", ylabel="latent 2")
+    axis.grid(alpha=0.25)
+    axis.legend(fontsize=8)
 
-    ax_trajectory.legend(fontsize=8)
-
-    # ------------------------------------------------------------
-    # Formatting
-    # ------------------------------------------------------------
-
-    for axis in (
-        ax_position,
-        ax_velocity,
-        ax_acceleration,
-        ax_trajectory,
-    ):
-        axis.grid(alpha=0.25)
-
-    figure.suptitle(
-        "What information is carried by the 3D latent?"
-    )
-
-    figure.tight_layout()
+    figure.suptitle("What information is carried by the 2D latent?")
+    figure.tight_layout(rect=(0, 0, 1, 0.96))
     figure.savefig(path, dpi=160)
     plt.close(figure)
+
+
 def _save_physics_plot(dataset: CarDataset, path: Path) -> None:
     dt = TIME_STEP
     times = dt * np.arange(dataset.position.shape[1])
@@ -321,13 +380,15 @@ def _save_physics_plot(dataset: CarDataset, path: Path) -> None:
             alpha=0.75,
         )
 
-    history_end = dataset.history.shape[1] * dt
+    # Put the divider halfway between the last observed and first forecast
+    # samples so it does not overlap either data point.
+    history_end = (dataset.history.shape[1] - 0.5) * dt
 
     axes[0].axvline(
         history_end,
         color="black",
         linestyle="--",
-        label="history ends",
+        label="history / forecast boundary",
     )
 
     axes[0].set_ylabel("position")
@@ -354,6 +415,7 @@ def run_experiment(
     steps: int = 100,
     batch_size: int = 128,
     covariance_weight: float = COVARIANCE_WEIGHT,
+    correlation_weight: float = CORRELATION_WEIGHT,
     device_name: str = "auto",
 ) -> dict[str, float | list[float]]:
     """Train exactly one encoder-reservoir model and save results and figures."""
@@ -397,7 +459,11 @@ def run_experiment(
             history_tensor, target_tensor.shape[1]
         )
         loss = torch.mean((prediction - target_tensor) ** 2)
-        loss = loss + covariance_weight * covariance_penalty(initial_latent)
+        loss = (
+            loss
+            + covariance_weight * covariance_penalty(initial_latent)
+            + correlation_weight * correlation_penalty(initial_latent)
+        )
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -426,6 +492,7 @@ def run_experiment(
         prediction=prediction,
         position=test.position,
         velocity=test.velocity,
+        acceleration=test.acceleration,
         initial_latent=initial_latent,
         future_latent=future_latent,
     )
@@ -434,7 +501,12 @@ def run_experiment(
     _save_training_plot(history, output / "training.png")
     _save_physics_plot(test, output / "ground_truth_dynamics.png")
     _save_prediction_plot(test, prediction, output / "predictions.png")
-    _save_latent_plot(test, initial_latent, future_latent, output / "latent_dynamics.png")
+    _save_latent_animation(
+        test, initial_latent, future_latent, output / "latent_dynamics.gif"
+    )
+    _save_latent_plot(
+        test, initial_latent, future_latent, output / "latent_dynamics.png"
+    )
     print(json.dumps(metrics, indent=2), flush=True)
     print(f"saved results to {output}", flush=True)
     return metrics

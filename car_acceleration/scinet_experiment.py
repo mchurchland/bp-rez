@@ -16,6 +16,7 @@ from .experiment import (
     POSITION_SCALE,
     _batches,
     _evaluate,
+    _save_latent_animation,
     _save_latent_plot,
     _save_physics_plot,
     _save_prediction_plot,
@@ -120,8 +121,12 @@ def run_scinet_experiment(
     _save_training_plot(history, output / "training.png")
     _save_physics_plot(test, output / "ground_truth_dynamics.png")
     _save_prediction_plot(test, prediction, output / "predictions.png")
-    _save_latent_plot(test, initial_latent, future_latent, output / "latent_dynamics.png")
+    _save_latent_animation(
+        test, initial_latent, future_latent, output / "latent_dynamics.gif"
+    )
+    _save_latent_plot(
+        test, initial_latent, future_latent, output / "latent_dynamics.png"
+    )
     print(json.dumps(metrics, indent=2), flush=True)
     print(f"saved results to {output}", flush=True)
     return metrics
-

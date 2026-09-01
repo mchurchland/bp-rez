@@ -46,7 +46,7 @@ def generate_car_dataset(
     seed: int,
     *,
     history_length: int = 5,
-    forecast_horizon: int = 50,
+    forecast_horizon: int = 20,
     dt: float = 1.0,
     acc: float = 0.5,
     acceleration_variable: bool = True,
@@ -74,14 +74,14 @@ def generate_car_dataset(
     rng = np.random.default_rng(seed)
 
     initial_position = rng.uniform(
-        -5.0,
-        5.0,
+        -10.0,
+        10.0,
         size=samples,
     )
 
     initial_velocity = rng.uniform(
-        -2.0,
-        2.0,
+        -0.5,
+        0.5,
         size=samples,
     )
 
@@ -94,8 +94,8 @@ def generate_car_dataset(
     if acceleration_variable:
         # Each trajectory gets an independently sampled acceleration law.
         acceleration_per_car = rng.uniform(
-            -1.0,
-            1.0,
+            -0.5,
+            0.5,
             size=samples,
         )
 

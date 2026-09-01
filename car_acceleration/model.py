@@ -22,7 +22,7 @@ class CarReservoir(nn.Module):
         self,
         *,
         nodes: int = 150,
-        latent_size: int = 3,
+        latent_size: int = 2,
         spectral_radius: float = 0.99,
         density: float = 0.1,
         leak_rate: float = 0.8,

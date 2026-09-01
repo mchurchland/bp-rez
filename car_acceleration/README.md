@@ -171,7 +171,8 @@ Each run writes the following files to its output directory:
 | `training.png` | Training and validation curves |
 | `predictions.png` | Example held-out position forecasts |
 | `ground_truth_dynamics.png` | Physical position, velocity, and acceleration |
-| `latent_dynamics.png` | Physical coloring of the latent and one rollout |
+| `latent_dynamics.png` | Static (t=4) latent snapshot colored by (x_4, v_4, a_4) |
+| `latent_dynamics.gif` | Frame-by-frame physical coloring of the evolving 2D latent |
 
 The default output-directory name still contains `2latent` for historical
 reasons; the current model uses a three-dimensional latent.
